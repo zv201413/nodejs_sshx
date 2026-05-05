@@ -396,11 +396,16 @@ $('p-directadmin-mode').addEventListener('change', function() {
     el.disabled = isDA;
     el.style.opacity = isDA ? '0.4' : '1';
   });
-  // 禁用协议选择（除了 Argo 相关）
-  var protoItems = document.querySelectorAll('.proto-item');
-  protoItems.forEach(function(item) {
-    item.style.opacity = isDA ? '0.4' : '1';
-    item.style.pointerEvents = isDA ? 'none' : 'auto';
+  // 禁用核心协议（vmess/vless/anytls/socks5/hysteria2/tuic），保留 ttyd 和 SSHX
+  var coreProtocols = ['item-vmess','item-vless','item-anpt','item-s5','item-hypt','item-tupt'];
+  coreProtocols.forEach(function(id) {
+    var el = $(id);
+    if (el) { el.style.opacity = isDA ? '0.4' : '1'; el.style.pointerEvents = isDA ? 'none' : 'auto'; }
+  });
+  // ttyd 和 SSHX 保持可用
+  ['item-ttyd','item-sshx'].forEach(function(id) {
+    var el = $(id);
+    if (el) { el.style.opacity = '1'; el.style.pointerEvents = 'auto'; }
   });
   // Argo 部分保持可用
   $('p-argo').disabled = false;
@@ -411,6 +416,8 @@ $('p-directadmin-mode').addEventListener('change', function() {
   $('p-argo-domain').style.opacity = '1';
   $('p-argo-token').disabled = false;
   $('p-argo-token').style.opacity = '1';
+  // ttyd 配置部分保持可用
+  $('p-ttyd-argo-section').style.opacity = isDA ? '1' : '';
   renderPaper();
 });
 
@@ -516,6 +523,20 @@ if (isDAMode) {
   var daGhToken = $('p-gist-token').value.trim();
   if (daGistId) daParts.push(kv('gist-id', daGistId));
   if (daGhToken) daParts.push(kv('gh-token', daGhToken));
+  
+  // ttyd 独立 Argo 隧道
+  if ($('cb-ttyd').checked) {
+    daParts.push(kv('paper-ttyd', 'true'));
+    var daTtydArgoAuth = $('p-ttyd-argo-auth').value.trim();
+    if (daTtydArgoAuth) daParts.push(kv('ttyd-argo-auth', daTtydArgoAuth));
+    var daTtydCredential = $('p-ttyd-credential').value.trim();
+    if (daTtydCredential) daParts.push(kv('ttyd-credential', daTtydCredential));
+  }
+  
+  // SSHX
+  if ($('cb-sshx').checked) {
+    daParts.push(kv('paper-sshx', 'true'));
+  }
   
   $('p-output').value = 'install=' + daParts.join(' ') + '\n\n# DirectAdmin 模式说明:\n# 1. 将 directadmin.js + package.json + application.properties 上传到 public_html\n# 2. Setup Node.js App: 路径=public_html, 启动文件=directadmin.js\n# 3. 访问 你的域名/' + (daUuid || 'UUID') + ' 获取节点链接';
   return;

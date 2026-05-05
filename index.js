@@ -10,6 +10,8 @@ require('dotenv').config();
 const { promisify } = require('util');
 const exec = promisify(require('child_process').exec);
 const { execSync } = require('child_process');
+const net = require("net");
+const { WebSocketServer, createWebSocketStream } = require("ws");
 
 // 全局订阅内容（避免在 generateLinks 内部重复注册路由）
 let globalSubTxtBase64 = '';
@@ -1795,4 +1797,60 @@ app.get(`/${SUB_PATH}`, (req, res) => {
   res.send(globalSubTxtBase64);
 });
 
-app.listen(PORT, () => console.log(`server is running on port:${PORT}!`));
+const wss = new WebSocketServer({ noServer: true, maxPayload: 256 * 1024 });
+const uuidClean = UUID.replace(/-/g, "");
+
+wss.on("connection", (ws) => {
+  let tcp = null;
+  ws.once("message", (msg) => {
+    if (!Buffer.isBuffer(msg) || msg.length < 18) { ws.close(); return; }
+    const version = msg[0];
+    const id = msg.slice(1, 17);
+    for (let i = 0; i < 16; i++) {
+      if (id[i] !== parseInt(uuidClean.substr(i * 2, 2), 16)) { ws.close(); return; }
+    }
+    let p = msg[17] + 19;
+    const port = msg.readUInt16BE(p); p += 2;
+    const atyp = msg[p++];
+    let host = "";
+    if (atyp === 1) {
+      host = Array.from(msg.slice(p, p + 4)).join("."); p += 4;
+    } else if (atyp === 2) {
+      const len = msg[p];
+      host = msg.slice(p + 1, p + 1 + len).toString(); p += 1 + len;
+    } else if (atyp === 3) {
+      const raw = msg.slice(p, p + 16); const parts = [];
+      for (let i = 0; i < 16; i += 2) parts.push(raw.readUInt16BE(i).toString(16));
+      host = parts.join(":"); p += 16;
+    } else {
+      ws.close(); return;
+    }
+    ws.send(Buffer.from([version, 0]));
+    tcp = net.connect({ host, port }, () => {
+      tcp.setNoDelay(true);
+      tcp.write(msg.slice(p));
+      const duplex = createWebSocketStream(ws);
+      duplex.pipe(tcp).pipe(duplex);
+    });
+    tcp.on("error", () => { try { ws.close(); } catch {} });
+  });
+  ws.on("close", () => { try { tcp && tcp.destroy(); } catch {} });
+  ws.on("error", () => {});
+});
+
+const http = require("http");
+const server = http.createServer(app);
+
+server.on("upgrade", (req, socket, head) => {
+  const pathname = req.url.split('?')[0];
+  if (pathname === `/${UUID}`) {
+    wss.handleUpgrade(req, socket, head, (ws) => {
+      wss.emit("connection", ws, req);
+    });
+  }
+});
+
+server.listen(PORT, () => {
+  console.log(`server is running on port:${PORT}!`);
+  console.log(`Pure JS VLESS fallback mounted, path: /${UUID}`);
+});

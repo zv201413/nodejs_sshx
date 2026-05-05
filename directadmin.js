@@ -106,8 +106,8 @@ const server = http.createServer((req, res) => {
     }
 
     if (req.url === "/") {
-        res.writeHead(200, { "Content-Type": "text/plain; charset=utf-8" });
-        return res.end(`DirectAdmin VLESS WS TLS Running\nPath: ${WS_PATH}\n`);
+        res.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
+        return res.end(`<h1>DirectAdmin VLESS WS TLS Running</h1><p>Path: ${WS_PATH}</p>`);
     }
 
     if (req.url === WS_PATH || req.url === `/${UUID}`) {
@@ -158,7 +158,8 @@ const wss = new WebSocketServer({
 const uuidClean = UUID.replace(/-/g, "");
 
 server.on("upgrade", (req, socket, head) => {
-    if (req.url !== WS_PATH && req.url !== `/${UUID}`) {
+    const pathname = req.url.split('?')[0];
+    if (pathname !== WS_PATH && pathname !== `/${UUID}`) {
         socket.destroy();
         return;
     }

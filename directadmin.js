@@ -84,25 +84,7 @@ function generateVlessLink(address) {
     );
 }
 
-function generateVmessLink(address) {
-    const vmess = {
-        v: "2",
-        ps: `${NAME}-VMess`,
-        add: address,
-        port: "443",
-        id: UUID,
-        aid: "0",
-        net: "ws",
-        type: "none",
-        host: DOMAIN,
-        path: WS_PATH,
-        tls: "tls",
-        sni: DOMAIN,
-        alpn: ""
-    };
-    const base64 = Buffer.from(JSON.stringify(vmess)).toString('base64');
-    return `vmess://${base64}`;
-}
+
 
 const server = http.createServer((req, res) => {
     if (req.headers.upgrade) {
@@ -112,13 +94,13 @@ const server = http.createServer((req, res) => {
 
     if (req.url === "/") {
         res.writeHead(200, { "Content-Type": "text/plain; charset=utf-8" });
-        return res.end(`DirectAdmin VLESS/VMess WS TLS Running\nPath: ${WS_PATH}\n`);
+        return res.end(`DirectAdmin VLESS WS TLS Running\nPath: ${WS_PATH}\n`);
     }
 
     if (req.url === WS_PATH || req.url === `/${UUID}`) {
         const sendNodes = async () => {
             let countryCode = await getCountryCode();
-            let txt = `═════ ${countryCode} DirectAdmin VLESS/VMess WS TLS ═════\n\n`;
+            let txt = `═════ ${countryCode} DirectAdmin VLESS WS TLS ═════\n\n`;
             txt += `📋 UUID: ${UUID}\n`;
             txt += `📋 Domain: ${DOMAIN}\n`;
             txt += `📋 Path: ${WS_PATH}\n\n`;
@@ -126,11 +108,6 @@ const server = http.createServer((req, res) => {
             txt += "--- VLESS Nodes ---\n\n";
             for (const d of BEST_DOMAINS) {
                 txt += generateVlessLink(d) + "\n\n";
-            }
-            
-            txt += "--- VMess Nodes ---\n\n";
-            for (const d of BEST_DOMAINS) {
-                txt += generateVmessLink(d) + "\n\n";
             }
             
             txt += "节点已全部生成，可直接复制使用。\n";

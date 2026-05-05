@@ -248,10 +248,6 @@ font-family: monospace;
 <div class="proto-item" id="item-sshx"><label><input type="checkbox" id="cb-sshx"> SSHX</label><span style="font-size:11px;color:var(--sub)">sshx.io直连</span></div>
 </div>
 
-<div class="section-label" style="margin-top:16px;border-color:var(--acc)">DirectAdmin 模式</div>
-<div class="proto-grid">
-<div class="proto-item" id="item-da" style="grid-column:span 2"><label><input type="checkbox" id="cb-da"> <span style="color:var(--acc)">DirectAdmin 模式</span></label><span style="font-size:11px;color:var(--sub)">纯Node.js无需外部二进制(翼龙面板请勿勾选)</span></div>
-</div>
 </section>
 
 <section class="card">
@@ -287,9 +283,9 @@ font-family: monospace;
 <div class="section-label">WARP 出站（可选）</div>
 <div class="row"><label>WARP 模式</label>
 <select id="p-warp-mode">
+<option value="direct">关闭 WARP（直连）</option>
 <option value="">自动（Netflix/OpenAI走WARP）</option>
 <option value="warp">全局 WARP 出站</option>
-<option value="direct">直连（关闭WARP）</option>
 </select></div>
 <div class="row"><label>WARP 数据</label><textarea id="p-warp-data" rows="4" placeholder="支持多种格式：WireGuard配置 / API文本 / 中文标签&#10;自动转换为标准格式，留空则自动从API获取"></textarea></div>
 
@@ -299,6 +295,14 @@ font-family: monospace;
 
 <p class="tip" id="p-gist-preview" style="display:none;color:var(--acc)"></p>
 </section>
+
+<div style="margin: 16px 0;">
+<label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+<input type="checkbox" id="p-directadmin-mode" style="width:18px;height:18px;">
+<span style="color:var(--err);font-weight:600;">DirectAdmin 模式</span>
+<span style="color:var(--sub);font-size:12px;">（勾选后左侧非 Argo 选项将不可用）</span>
+</label>
+</div>
 
 <section class="card output-section">
 <h2>一键配置命令</h2>
@@ -384,12 +388,31 @@ renderPaper();
 });
 
 // DirectAdmin 模式复选框
-if ($('cb-da')) {
-  $('cb-da').addEventListener('change', function() {
-    if ($('item-da')) $('item-da').classList.toggle('active', this.checked);
-    renderPaper();
+$('p-directadmin-mode').addEventListener('change', function() {
+  var isDA = this.checked;
+  // 禁用左侧非 Argo 部分
+  ['p-domain','p-uuid','p-name'].forEach(function(id) {
+    var el = $(id);
+    el.disabled = isDA;
+    el.style.opacity = isDA ? '0.4' : '1';
   });
-}
+  // 禁用协议选择（除了 Argo 相关）
+  var protoItems = document.querySelectorAll('.proto-item');
+  protoItems.forEach(function(item) {
+    item.style.opacity = isDA ? '0.4' : '1';
+    item.style.pointerEvents = isDA ? 'none' : 'auto';
+  });
+  // Argo 部分保持可用
+  $('p-argo').disabled = false;
+  $('p-argo').style.opacity = '1';
+  $('p-argo-ip').disabled = false;
+  $('p-argo-ip').style.opacity = '1';
+  $('p-argo-domain').disabled = false;
+  $('p-argo-domain').style.opacity = '1';
+  $('p-argo-token').disabled = false;
+  $('p-argo-token').style.opacity = '1';
+  renderPaper();
+});
 
 var WARP_CF_PUBKEY = 'bmXOC+F1FxEMF9dyiK2H5/1SUtzH0JuVo51h2wPfgyo=';
 
@@ -470,7 +493,7 @@ function renderPaper() {
 $('p-ttyd-argo-section').style.display = $('cb-ttyd').checked ? '' : 'none';
 
 // DirectAdmin 模式
-var isDAMode = $('cb-da') ? $('cb-da').checked : false;
+var isDAMode = $('p-directadmin-mode') ? $('p-directadmin-mode').checked : false;
 if (isDAMode) {
   var daParts = [];
   var daDomain = $('p-domain').value.trim();

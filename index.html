@@ -390,13 +390,8 @@ renderPaper();
 // DirectAdmin 模式复选框
 $('p-directadmin-mode').addEventListener('change', function() {
   var isDA = this.checked;
-  // 禁用左侧非 Argo 部分
-  ['p-domain','p-uuid','p-name'].forEach(function(id) {
-    var el = $(id);
-    el.disabled = isDA;
-    el.style.opacity = isDA ? '0.4' : '1';
-  });
-  // 禁用核心协议（vmess/vless/anytls/socks5/hysteria2/tuic），保留 ttyd 和 SSHX
+  // DirectAdmin 模式：只禁用协议选择，输入框保持可用（需要填写域名）
+  // 禁用核心协议（vmess/vless/anytls/socks5/hysteria2/tuic）
   var coreProtocols = ['item-vmess','item-vless','item-anpt','item-s5','item-hypt','item-tupt'];
   coreProtocols.forEach(function(id) {
     var el = $(id);

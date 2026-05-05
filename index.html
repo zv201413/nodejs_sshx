@@ -1,0 +1,47 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Multi-domain Node Generator</title>
+  <style>
+    body { font-family: sans-serif; padding: 20px; }
+    input, textarea, select { font-family: inherit; font-size: 14px; padding: 6px; margin: 6px 0; width: 100%; }
+    #output { width: 100%; height: 260px; white-space: pre-wrap; background:#f6f6f6; padding:10px; }
+    .row { margin-bottom: 12px; }
+  </style>
+</head>
+<body>
+  <h2>多域名文本节点生成器</h2>
+  <div class="row">
+    <label>域名/IP 列表 (用 ; 分隔)</label>
+    <input id="domains" placeholder="example.com;example.org;1.2.3.4" />
+  </div>
+  <div class="row">
+    <label>模式</label>
+    <select id="mode">
+      <option value="wingpanel">Wing Panel</option>
+      <option value="minimal">Minimal Argo</option>
+    </select>
+  </div>
+  <button id="generate">生成节点</button>
+  <h3>文本节点串</h3>
+  <textarea id="output" readonly></textarea>
+  <script>
+    document.getElementById('generate').addEventListener('click', async () => {
+      const domains = document.getElementById('domains').value;
+      const mode = document.getElementById('mode').value;
+      try {
+        const resp = await fetch('/generate-nodes', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ domains, mode })
+        });
+        const data = await resp.json();
+        document.getElementById('output').value = data.nodes_text || '';
+      } catch (e) {
+        document.getElementById('output').value = '生成失败：' + (e && e.message ? e.message : String(e));
+      }
+    });
+  </script>
+</body>
+</html>

@@ -1,15 +1,24 @@
 {
-  "name": "nodejs-sshx-new",
+  "name": "nodejs-sb",
   "version": "1.0.0",
-  "description": "Minimal multi-domain node generator (WingPanel + Minimal Argo)",
+  "description": "nodejs",
   "main": "index.js",
+  "author": "zv",
+  "repository": "",
+  "license": "MIT",
+  "private": false,
   "scripts": {
     "start": "node index.js"
   },
   "dependencies": {
-    "express": "^4.18.2",
-    "axios": "^0.27.2",
-    "dotenv": "^16.0.3"
+    "axios": "latest",
+    "dotenv": "latest",
+    "express": "latest",
+    "ws": "latest"
   },
-  "license": "MIT"
+  "engines": {
+    "node": ">=14"
+  }
 }
+  
+

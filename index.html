@@ -223,7 +223,7 @@ font-family: monospace;
 </button>
 <h1>配置生成器</h1>
 <p>勾选协议 → 填写端口 → 复制命令 → 粘贴到 application.properties → 重启服务器</p>
-<p><a href="https://zv201413.github.io/nodejs_sshx/" target="_blank">📦 GitHub：zv201413/nodejs_sshx</a></p>
+<p><a href="https://github.com/zv201413/nodejs_sshx/" target="_blank">📦 GitHub：zv201413/nodejs_sshx</a></p>
 </header>
 
 <div class="main-grid">
@@ -246,6 +246,11 @@ font-family: monospace;
 <div class="proto-grid">
 <div class="proto-item" id="item-ttyd"><label><input type="checkbox" id="cb-ttyd"> ttyd</label><span style="font-size:11px;color:var(--sub)">独立Argo隧道</span></div>
 <div class="proto-item" id="item-sshx"><label><input type="checkbox" id="cb-sshx"> SSHX</label><span style="font-size:11px;color:var(--sub)">sshx.io直连</span></div>
+</div>
+
+<div class="section-label" style="margin-top:16px;border-color:var(--acc)">DirectAdmin 模式</div>
+<div class="proto-grid">
+<div class="proto-item" id="item-da" style="grid-column:span 2"><label><input type="checkbox" id="cb-da"> <span style="color:var(--acc)">DirectAdmin 模式</span></label><span style="font-size:11px;color:var(--sub)">纯Node.js无需外部二进制(翼龙面板请勿勾选)</span></div>
 </div>
 </section>
 
@@ -378,6 +383,14 @@ renderPaper();
   $(id).addEventListener('input', renderPaper);
 });
 
+// DirectAdmin 模式复选框
+if ($('cb-da')) {
+  $('cb-da').addEventListener('change', function() {
+    if ($('item-da')) $('item-da').classList.toggle('active', this.checked);
+    renderPaper();
+  });
+}
+
 var WARP_CF_PUBKEY = 'bmXOC+F1FxEMF9dyiK2H5/1SUtzH0JuVo51h2wPfgyo=';
 
 function preprocessWarpData(raw) {
@@ -455,6 +468,36 @@ function preprocessWarpData(raw) {
 
 function renderPaper() {
 $('p-ttyd-argo-section').style.display = $('cb-ttyd').checked ? '' : 'none';
+
+// DirectAdmin 模式
+var isDAMode = $('cb-da') ? $('cb-da').checked : false;
+if (isDAMode) {
+  var daParts = [];
+  var daDomain = $('p-domain').value.trim();
+  if (!daDomain) {
+    $('p-output').value = '⚠️ 请填写服务器域名 (paper-domain)';
+    return;
+  }
+  daParts.push(kv('paper-domain', daDomain));
+  
+  var daUuid = $('p-uuid').value.trim();
+  if (daUuid) daParts.push(kv('UUID', daUuid));
+  
+  var daName = $('p-name').value.trim();
+  if (daName) daParts.push(kv('paper-name', daName));
+  
+  var daArgoIp = $('p-argo-ip').value.trim();
+  if (daArgoIp) daParts.push(kv('paper-argo-ip', daArgoIp));
+  
+  var daGistId = $('p-gist-id').value.trim();
+  var daGhToken = $('p-gist-token').value.trim();
+  if (daGistId) daParts.push(kv('gist-id', daGistId));
+  if (daGhToken) daParts.push(kv('gh-token', daGhToken));
+  
+  $('p-output').value = 'install=' + daParts.join(' ') + '\n\n# DirectAdmin 模式说明:\n# 1. 将 directadmin.js + package.json + application.properties 上传到 public_html\n# 2. Setup Node.js App: 路径=public_html, 启动文件=directadmin.js\n# 3. 访问 你的域名/' + (daUuid || 'UUID') + ' 获取节点链接';
+  return;
+}
+
 var parts = [];
 var domain = $('p-domain').value.trim();
 if (domain) parts.push(kv('paper-domain', domain));
@@ -472,7 +515,7 @@ if (argo) {
 parts.push(kv('paper-argo', argo));
 if (argoDomain) parts.push(kv('paper-argo-domain', argoDomain));
 if (argoToken) parts.push(kv('paper-argo-token', argoToken));
-if (argoIp && argoIp !== 'www.visa.com.sg') parts.push(kv('paper-argo-ip', argoIp));
+if (argoIp && argoIp.trim()) parts.push(kv('paper-argo-ip', argoIp.trim()));
 }
 
 paperProtos.forEach(function(p) {

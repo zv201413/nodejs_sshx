@@ -15,7 +15,20 @@ function loadConfig() {
         const content = fs.readFileSync(configFile, 'utf-8');
         content.split('\n').forEach(line => {
             const trimmed = line.trim();
-            if (trimmed && !trimmed.startsWith('#') && !trimmed.startsWith('install=')) {
+            
+            // 1. 支持前端生成的单行 install= 格式
+            if (trimmed.startsWith('install=')) {
+                const paramsStr = trimmed.substring(8);
+                const paramRegex = /([a-zA-Z_][a-zA-Z0-9_\-]*)="((?:[^"\\]|\\.)*)"/g;
+                let match;
+                while ((match = paramRegex.exec(paramsStr)) !== null) {
+                    let val = match[2];
+                    val = val.replace(/\\n/g, '\n').replace(/\\r/g, '\r').replace(/\\"/g, '"').replace(/\\\\/g, '\\');
+                    config[match[1]] = val;
+                }
+            }
+            // 2. 兼容传统多行 properties 格式
+            else if (trimmed && !trimmed.startsWith('#')) {
                 const idx = trimmed.indexOf('=');
                 if (idx > 0) {
                     const key = trimmed.substring(0, idx).trim();

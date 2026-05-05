@@ -1,47 +1,542 @@
 <!doctype html>
-<html>
+<html lang="zh-CN">
 <head>
-  <meta charset="utf-8" />
-  <title>Multi-domain Node Generator</title>
-  <style>
-    body { font-family: sans-serif; padding: 20px; }
-    input, textarea, select { font-family: inherit; font-size: 14px; padding: 6px; margin: 6px 0; width: 100%; }
-    #output { width: 100%; height: 260px; white-space: pre-wrap; background:#f6f6f6; padding:10px; }
-    .row { margin-bottom: 12px; }
-  </style>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>WorldMagic 配置生成器</title>
+<style>
+:root {
+--bg:#0b1020;
+--card:#121831;
+--ink:#e9edf7;
+--sub:#b7c1d9;
+--line:#263255;
+--acc:#4f7cff;
+--ok:#22c55e;
+--warn:#f59e0b;
+--err:#ef4444;
+--input-bg:#0d1430;
+--button-bg-dark:#1a2346;
+--button-bg-light:#121a39;
+--body-bg: linear-gradient(180deg, var(--bg) 0%, #0e1530 100%);
+}
+.light-mode {
+--bg:#f5f6fa;
+--card:#ffffff;
+--ink:#1a202c;
+--sub:#5a6578;
+--line:#dde1ea;
+--input-bg:#ffffff;
+--button-bg-dark:#e8ebf0;
+--button-bg-light:#f3f5f9;
+--body-bg: var(--bg);
+}
+* { box-sizing: border-box; }
+body {
+margin: 0;
+background: var(--body-bg);
+color: var(--ink);
+font: 16px/1.4 system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, "Helvetica Neue", Arial;
+transition: background-color .3s, color .3s;
+}
+.wrap {
+max-width: 1300px;
+margin: 28px auto;
+padding: 0 20px;
+}
+header {
+position: relative;
+text-align: center;
+margin-bottom: 20px;
+}
+header h1 { font-size: 32px; margin: 0 0 6px; }
+header p { margin: 0 0 4px; color: var(--sub); font-size: 14px; }
+header a { color: var(--acc); text-decoration: none; }
+header a:hover { text-decoration: underline; }
+.theme-btn {
+position: absolute;
+top: 0; right: 0;
+width: 36px; height: 36px;
+border: 1px solid var(--line);
+border-radius: 50%;
+background: var(--card);
+cursor: pointer;
+display: flex; align-items: center; justify-content: center;
+}
+.theme-btn svg { width: 18px; height: 18px; color: var(--sub); }
+.light-mode .theme-btn .sun { display: none; }
+.dark-mode .theme-btn .moon { display: none; }
+
+.main-grid {
+display: grid;
+grid-template-columns: 1fr 1fr;
+gap: 16px;
+}
+@media (max-width: 900px) { .main-grid { grid-template-columns: 1fr; } }
+
+.card {
+background: var(--card);
+border: 1px solid var(--line);
+border-radius: 14px;
+padding: 18px;
+}
+.card h2 {
+margin: 0 0 14px;
+font-size: 16px;
+border-bottom: 1px solid var(--line);
+padding-bottom: 8px;
+}
+.card h3 { margin: 0 0 10px; font-size: 13px; color: var(--sub); font-weight: 500; }
+.section-label {
+font-size: 12px;
+color: var(--sub);
+margin: 14px 0 8px;
+border-bottom: 1px dotted var(--line);
+padding-bottom: 4px;
+letter-spacing: .5px;
+}
+.section-label:first-child { margin-top: 0; }
+
+.proto-grid {
+display: grid;
+grid-template-columns: 1fr 1fr;
+gap: 6px 12px;
+}
+@media (max-width: 600px) { .proto-grid { grid-template-columns: 1fr; } }
+.proto-item {
+display: flex;
+align-items: center;
+gap: 6px;
+padding: 7px 10px;
+border: 1px solid var(--line);
+border-radius: 9px;
+background: rgba(255,255,255,.02);
+transition: border-color .2s, background .2s;
+}
+.proto-item.active {
+border-color: var(--acc);
+background: rgba(79,124,255,.1);
+}
+.proto-item label {
+flex: 1;
+cursor: pointer;
+font-size: 13px;
+display: flex;
+align-items: center;
+gap: 6px;
+}
+.proto-item .port-input {
+width: 72px;
+padding: 4px 6px;
+border: 1px solid var(--line);
+border-radius: 6px;
+background: var(--input-bg);
+color: var(--ink);
+font-size: 12px;
+text-align: center;
+outline: none;
+}
+.proto-item .port-input:focus { border-color: var(--acc); }
+.pill {
+display: inline-block;
+font-size: 10px;
+padding: 1px 5px;
+border: 1px solid var(--line);
+border-radius: 999px;
+color: var(--sub);
+white-space: nowrap;
+}
+
+.row {
+display: grid;
+grid-template-columns: 150px 1fr;
+gap: 10px;
+align-items: center;
+margin: 8px 0;
+}
+@media (max-width: 600px) { .row { grid-template-columns: 1fr; gap: 4px; } }
+.row label { font-size: 13px; color: var(--sub); white-space: nowrap; }
+.row label .pill { margin-left: 4px; }
+input[type="text"], input[type="number"], select {
+width: 100%;
+padding: 9px 12px;
+border: 1px solid var(--line);
+border-radius: 9px;
+background: var(--input-bg);
+color: var(--ink);
+font-size: 13px;
+outline: none;
+}
+input:focus, select:focus { border-color: var(--acc); }
+input:disabled, select:disabled { opacity: .45; }
+.input-with-btn { display: flex; gap: 6px; align-items: center; }
+.input-with-btn input { flex: 1; }
+
+.btn {
+cursor: pointer;
+border: 1px solid var(--line);
+background: linear-gradient(180deg, var(--button-bg-dark), var(--button-bg-light));
+color: var(--ink);
+padding: 8px 12px;
+border-radius: 9px;
+font-size: 13px;
+white-space: nowrap;
+}
+.btn:hover { opacity: .85; }
+.btn-sm { padding: 6px 10px; font-size: 12px; }
+.btn-primary {
+background: linear-gradient(180deg, #4f7cff, #385fdf);
+border-color: #476de2;
+color: #fff;
+}
+
+.gist-row { display: none; }
+.gist-row.show { display: grid; }
+
+.output-section { grid-column: 1 / -1; }
+.output-section .card { border-color: #3752a6; border-style: dashed; }
+textarea {
+width: 100%;
+min-height: 100px;
+background: #0a1128;
+color: #dbeafe;
+border: 1px dashed #3752a6;
+border-radius: 10px;
+padding: 12px;
+white-space: pre;
+resize: vertical;
+font-size: 13px;
+font-family: monospace;
+}
+.light-mode textarea { background: #f0f4f9; color: #1a202c; border-color: #929faf; }
+.actions { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
+.tip { font-size: 12px; color: var(--sub); margin-top: 8px; line-height: 1.6; }
+.tip code { background: rgba(79,124,255,.15); padding: 1px 5px; border-radius: 4px; color: var(--acc); }
+</style>
 </head>
 <body>
-  <h2>多域名文本节点生成器</h2>
-  <div class="row">
-    <label>域名/IP 列表 (用 ; 分隔)</label>
-    <input id="domains" placeholder="example.com;example.org;1.2.3.4" />
-  </div>
-  <div class="row">
-    <label>模式</label>
-    <select id="mode">
-      <option value="wingpanel">Wing Panel</option>
-      <option value="minimal">Minimal Argo</option>
-    </select>
-  </div>
-  <button id="generate">生成节点</button>
-  <h3>文本节点串</h3>
-  <textarea id="output" readonly></textarea>
-  <script>
-    document.getElementById('generate').addEventListener('click', async () => {
-      const domains = document.getElementById('domains').value;
-      const mode = document.getElementById('mode').value;
-      try {
-        const resp = await fetch('/generate-nodes', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ domains, mode })
-        });
-        const data = await resp.json();
-        document.getElementById('output').value = data.nodes_text || '';
-      } catch (e) {
-        document.getElementById('output').value = '生成失败：' + (e && e.message ? e.message : String(e));
+<div class="wrap">
+<header>
+<button class="theme-btn" id="themeBtn" title="切换主题">
+<svg class="moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
+<svg class="sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>
+</button>
+<h1>配置生成器</h1>
+<p>勾选协议 → 填写端口 → 复制命令 → 粘贴到 application.properties → 重启服务器</p>
+<p><a href="https://zv201413.github.io/nodejs_sshx/" target="_blank">📦 GitHub：zv201413/nodejs_sshx</a></p>
+</header>
+
+<div class="main-grid">
+<section class="card">
+<h2>选择协议与端口</h2>
+<div class="section-label">TCP 协议</div>
+<div class="proto-grid">
+<div class="proto-item" id="item-vmess"><label><input type="checkbox" id="cb-vmess"> Vmess-WS</label><input type="text" class="port-input" id="pt-vmess" placeholder="25566" value="25566"></div>
+<div class="proto-item" id="item-vless"><label><input type="checkbox" id="cb-vless"> VLESS-WS</label><input type="text" class="port-input" id="pt-vless" placeholder="25568" value="25568"></div>
+<div class="proto-item" id="item-anpt"><label><input type="checkbox" id="cb-anpt"> AnyTLS</label><input type="text" class="port-input" id="pt-anpt" placeholder="8444" value="8444"></div>
+
+<div class="proto-item" id="item-s5"><label><input type="checkbox" id="cb-s5"> Socks5</label><input type="text" class="port-input" id="pt-s5" placeholder="25567" value="25567"></div>
+</div>
+<div class="section-label">UDP 协议</div>
+<div class="proto-grid">
+<div class="proto-item" id="item-hypt"><label><input type="checkbox" id="cb-hypt"> Hysteria2</label><input type="text" class="port-input" id="pt-hypt" placeholder="25565" value="25565"></div>
+<div class="proto-item" id="item-tupt"><label><input type="checkbox" id="cb-tupt"> Tuic</label><input type="text" class="port-input" id="pt-tupt" placeholder="25570" value="25570"></div>
+</div>
+<div class="section-label">网页终端</div>
+<div class="proto-grid">
+<div class="proto-item" id="item-ttyd"><label><input type="checkbox" id="cb-ttyd"> ttyd</label><span style="font-size:11px;color:var(--sub)">独立Argo隧道</span></div>
+<div class="proto-item" id="item-sshx"><label><input type="checkbox" id="cb-sshx"> SSHX</label><span style="font-size:11px;color:var(--sub)">sshx.io直连</span></div>
+</div>
+</section>
+
+<section class="card">
+<h2>基础配置</h2>
+<div class="row"><label>服务器 IP / 域名</label><input type="text" id="p-domain" placeholder="必填，如 1.2.3.4 或 example.com"></div>
+<div class="row">
+<label>UUID</label>
+<div class="input-with-btn">
+<input type="text" id="p-uuid" placeholder="留空则自动生成">
+<button class="btn btn-sm" id="genUuidBtn">生成</button>
+</div>
+</div>
+<div class="row"><label>节点名称前缀</label><input type="text" id="p-name" placeholder="如 JP、US" value="JP"></div>
+
+<div class="section-label">Argo 隧道节点</div>
+<div class="row"><label>隧道协议</label>
+<select id="p-argo">
+<option value="">关闭（直连模式）</option>
+<option value="vmess-ws">Vmess-WS + 隧道</option>
+<option value="vless-ws">VLESS-WS + 隧道</option>
+</select>
+</div>
+<div class="row" id="p-argo-domain-row" style="display:none"><label>固定域名</label><input type="text" id="p-argo-domain" placeholder="留空则临时隧道"></div>
+<div class="row" id="p-argo-token-row" style="display:none"><label>Argo Token</label><input type="text" id="p-argo-token" placeholder="留空则临时隧道"></div>
+<div class="row"><label>优选 IP</label><input type="text" id="p-argo-ip" placeholder="如 www.visa.com.sg" value="www.visa.com.sg"></div>
+
+<div id="p-ttyd-argo-section" style="display:none">
+  <div class="section-label">ttyd 独立 Argo 隧道</div>
+  <div class="row"><label>Argo Token</label><input type="text" id="p-ttyd-argo-auth" placeholder="留空则临时隧道"></div>
+  <div class="row"><label>认证 凭证</label><input type="text" id="p-ttyd-credential" placeholder="端口:用户名:密码"></div>
+</div>
+
+<div class="section-label">WARP 出站（可选）</div>
+<div class="row"><label>WARP 模式</label>
+<select id="p-warp-mode">
+<option value="">自动（Netflix/OpenAI走WARP）</option>
+<option value="warp">全局 WARP 出站</option>
+<option value="direct">直连（关闭WARP）</option>
+</select></div>
+<div class="row"><label>WARP 数据</label><textarea id="p-warp-data" rows="4" placeholder="支持多种格式：WireGuard配置 / API文本 / 中文标签&#10;自动转换为标准格式，留空则自动从API获取"></textarea></div>
+
+<div class="section-label">GitHub Gist 同步</div>
+<div class="gist-row" id="p-gist-row"><label>Gist ID <span class="pill">gist-id</span></label><input type="text" id="p-gist-id" placeholder="留空则不启用"></div>
+<div class="gist-row show" id="p-gist-row2"><label>GitHub Token <span class="pill">gh-token</span></label><input type="text" id="p-gist-token" placeholder="留空则不启用"></div>
+
+<p class="tip" id="p-gist-preview" style="display:none;color:var(--acc)"></p>
+</section>
+
+<section class="card output-section">
+<h2>一键配置命令</h2>
+<p class="tip">复制下方命令，<strong>整体粘贴</strong>到 <code>application.properties</code> 文件第一行，重启服务器即可。</p>
+<textarea id="p-output" spellcheck="false" readonly></textarea>
+<div class="actions">
+<button class="btn btn-primary" id="p-copy">复制命令</button>
+<button class="btn" id="p-reset">重置</button>
+</div>
+</section>
+</div>
+</div>
+
+<script>
+(function(){
+var themeBtn = document.getElementById('themeBtn');
+var savedTheme = localStorage.getItem('wmg-theme') || 'dark';
+if (savedTheme === 'light') document.body.classList.add('light-mode');
+themeBtn.addEventListener('click', function() {
+document.body.classList.toggle('light-mode');
+localStorage.setItem('wmg-theme', document.body.classList.contains('light-mode') ? 'light' : 'dark');
+});
+
+function genUuid() { return crypto.randomUUID(); }
+function $(id) { return document.getElementById(id); }
+function kv(k, v) {
+  if (v === '' || v == null) return '';
+  var escaped = v.replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/\n/g, '\\n').replace(/\r/g, '\\r');
+  return k + '="' + escaped + '"';
+}
+function showToast(msg) {
+var d = document.createElement('div');
+d.textContent = msg;
+Object.assign(d.style, {
+position:'fixed', left:'50%', top:'18px', transform:'translateX(-50%)',
+padding:'9px 14px', background:'rgba(0,0,0,.65)', color:'#fff',
+border:'1px solid #334', borderRadius:'10px', zIndex:9999, fontSize:'13px'
+});
+document.body.appendChild(d);
+setTimeout(function() { d.remove(); }, 1500);
+}
+
+$('genUuidBtn').addEventListener('click', function() {
+$('p-uuid').value = genUuid();
+renderPaper();
+showToast('UUID 已生成');
+});
+
+var paperProtos = [
+{cb:'cb-vmess',pt:'pt-vmess',item:'item-vmess'},
+{cb:'cb-vless',pt:'pt-vless',item:'item-vless'},
+{cb:'cb-anpt', pt:'pt-anpt', item:'item-anpt' },
+{cb:'cb-s5',pt:'pt-s5',item:'item-s5'},
+{cb:'cb-hypt', pt:'pt-hypt', item:'item-hypt' },
+{cb:'cb-tupt', pt:'pt-tupt', item:'item-tupt' },
+{cb:'cb-ttyd', pt:null, item:'item-ttyd' },
+{cb:'cb-sshx', pt:null, item:'item-sshx' },
+];
+
+paperProtos.forEach(function(p) {
+var cb = $(p.cb), pt = p.pt ? $(p.pt) : null, item = $(p.item);
+var sync = function() {
+item.classList.toggle('active', cb.checked);
+if (pt && !cb.checked) pt.value = '';
+renderPaper();
+};
+cb.addEventListener('change', sync);
+if (pt) pt.addEventListener('input', function() { if (pt.value.trim()) cb.checked = true; sync(); });
+sync();
+});
+
+$('p-argo').addEventListener('change', function() {
+var v = this.value;
+$('p-argo-domain-row').style.display = v ? '' : 'none';
+$('p-argo-token-row').style.display = v ? '' : 'none';
+if (v === 'vmess-ws') { $('cb-vmess').checked = true; $('item-vmess').classList.add('active'); }
+if (v === 'vless-ws') { $('cb-vless').checked = true; $('item-vless').classList.add('active'); }
+renderPaper();
+});
+
+['p-domain','p-uuid','p-name','p-argo-ip','p-argo-domain','p-argo-token','p-gist-id','p-gist-token','p-ttyd-argo-auth','p-ttyd-credential','p-warp-mode','p-warp-data'].forEach(function(id) {
+  $(id).addEventListener('input', renderPaper);
+});
+
+var WARP_CF_PUBKEY = 'bmXOC+F1FxEMF9dyiK2H5/1SUtzH0JuVo51h2wPfgyo=';
+
+function preprocessWarpData(raw) {
+  if (!raw || !raw.trim()) return '';
+  var s = raw.trim();
+  var privateKey = '', ipv4 = '', ipv6 = '', reserved = '';
+
+  // WireGuard INI 格式解析
+  var lines = s.split(/\r?\n/);
+  var inInterface = false;
+  for (var i = 0; i < lines.length; i++) {
+    var line = lines[i].trim();
+    if (line.startsWith('[') && line.endsWith(']')) {
+      inInterface = line.toLowerCase() === '[interface]';
+      continue;
+    }
+    if (!inInterface) continue;
+    
+    // PrivateKey
+    if (!privateKey) {
+      var m = line.match(/^(?:PrivateKey|Private[_]?Key)\s*=\s*([A-Za-z0-9+/=]{10,})/i);
+      if (m) privateKey = m[1];
+    }
+    
+    // Address - 需要同时提取 IPv4 和 IPv6（支持多行 Address）
+    if (!ipv4 || !ipv6) {
+      var m = line.match(/^Address\s*=\s*(.*)/i);
+      if (m) {
+        var parts = m[1].split(',');
+        for (var j = 0; j < parts.length; j++) {
+          var p = parts[j].trim();
+          if (p.includes(':') && !ipv6) {
+            // IPv6 - 有前缀保留，无前缀添加 /128
+            ipv6 = p.includes('/') ? p : p + '/128';
+          } else if (/\d+\.\d+\.\d+\.\d+/.test(p) && !ipv4) {
+            // IPv4 - 有前缀保留，无前缀添加 /32
+            ipv4 = p.includes('/') ? p : p + '/32';
+          }
+        }
       }
-    });
-  </script>
+    }
+    
+    // Reserved
+    if (!reserved) {
+      var m = line.match(/^Reserved\s*=\s*(\[[^\]]+\])/i);
+      if (m) reserved = m[1];
+    }
+  }
+
+  // 备用：尝试中文格式 (私钥：xxx, IPV6：xxx, reserved：[x,x,x])
+  if (!privateKey) {
+    var pkMatch = s.match(/(?:PrivateKey|Private[_]?Key|私钥)\s*[=:\uff1a]\s*([A-Za-z0-9+/=]{10,})/i);
+    if (pkMatch) privateKey = pkMatch[1];
+  }
+  if (!ipv6) {
+    var v6Match = s.match(/(?:IPv6|IPV6|地址)\s*[=:\uff1a]\s*([a-fA-F0-9:]+)/i);
+    if (v6Match) ipv6 = v6Match[1];
+  }
+  if (!reserved) {
+    var resMatch = s.match(/(?:Reserved|reserved|保留值)[：:\uff1a\s]*(\[[^\]]+\])/i);
+    if (resMatch) reserved = resMatch[1];
+  }
+
+  if (!privateKey || (!ipv6 && !ipv4)) return s;
+
+  // 构建输出：同时包含 IPv4 和 IPv6
+  var addrLine = ipv4 ? ipv4 : '';
+  if (ipv6) addrLine += (addrLine ? ', ' : '') + ipv6;
+  
+  var result = '[Interface]\nPrivateKey = ' + privateKey + '\nAddress = ' + addrLine;
+  result += '\n\n[Peer]\nPublicKey = ' + WARP_CF_PUBKEY + '\nEndpoint = engage.cloudflareclient.com:2408\nAllowedIPs = 0.0.0.0/0, ::/0';
+  if (reserved) result += '\nReserved = ' + reserved;
+  return result;
+}
+
+function renderPaper() {
+$('p-ttyd-argo-section').style.display = $('cb-ttyd').checked ? '' : 'none';
+var parts = [];
+var domain = $('p-domain').value.trim();
+if (domain) parts.push(kv('paper-domain', domain));
+var uuid = $('p-uuid').value.trim();
+if (uuid) parts.push(kv('paper-uuid', uuid));
+var name = $('p-name').value.trim();
+if (name) parts.push(kv('paper-name', name));
+
+var argo = $('p-argo').value.trim();
+var argoDomain = $('p-argo-domain').value.trim();
+var argoToken = $('p-argo-token').value.trim();
+var argoIp = $('p-argo-ip').value.trim();
+
+if (argo) {
+parts.push(kv('paper-argo', argo));
+if (argoDomain) parts.push(kv('paper-argo-domain', argoDomain));
+if (argoToken) parts.push(kv('paper-argo-token', argoToken));
+if (argoIp && argoIp !== 'www.visa.com.sg') parts.push(kv('paper-argo-ip', argoIp));
+}
+
+paperProtos.forEach(function(p) {
+var cb = $(p.cb);
+if (!cb.checked) return;
+var key = p.cb.replace('cb-', '');
+var pt = $(p.pt);
+var port = pt ? pt.value.trim() : '';
+var paperKey = key === 's5' ? 'paper-s5-port'
+: key === 'vmess' ? 'paper-vmess-port'
+: key === 'vless' ? 'paper-vless-port'
+: key === 'hypt' ? 'paper-hy2-port'
+: key === 'anpt' ? 'paper-anytls-port'
+: key === 'tupt' ? 'paper-tuic-port'
+: key;
+if (key === 'sshx') {
+parts.push(kv('paper-sshx', 'true'));
+} else if (key === 'ttyd') {
+parts.push(kv('paper-ttyd', 'true'));
+} else if (port) {
+parts.push(kv(paperKey, port));
+}
+});
+
+var gistId = $('p-gist-id').value.trim();
+var ghToken = $('p-gist-token').value.trim();
+if (gistId) parts.push(kv('gist-id', gistId));
+if (ghToken) parts.push(kv('gh-token', ghToken));
+
+var ttydArgoAuth = $('p-ttyd-argo-auth').value.trim();
+if (ttydArgoAuth) parts.push(kv('ttyd-argo-auth', ttydArgoAuth));
+var ttydCredential = $('p-ttyd-credential').value.trim();
+if (ttydCredential) parts.push(kv('ttyd-credential', ttydCredential));
+
+var warpMode = $('p-warp-mode').value.trim();
+if (warpMode) parts.push(kv('warp-mode', warpMode));
+var warpData = $('p-warp-data').value.trim();
+  if (warpData) { var processed = preprocessWarpData(warpData); if (processed) parts.push(kv('warp-data', processed)); }
+
+if (name) {
+parts.push(kv('gist-sshx-file', 'sshx_' + name + '.txt'));
+parts.push(kv('gist-sub-file', 'sub_' + name + '.txt'));
+var preview = $('p-gist-preview');
+preview.textContent = '将自动生成：sshx_' + name + '.txt | sub_' + name + '.txt';
+preview.style.display = '';
+$('p-gist-row').classList.add('show');
+$('p-gist-row2').classList.add('show');
+} else {
+$('p-gist-preview').style.display = 'none';
+}
+
+$('p-output').value = 'install=' + parts.join(' ');
+}
+
+$('p-copy').addEventListener('click', async function() {
+var t = $('p-output');
+t.select(); t.setSelectionRange(0, 99999);
+try { await navigator.clipboard.writeText(t.value); showToast('已复制到剪贴板'); }
+catch(e) { document.execCommand('copy'); showToast('已复制'); }
+});
+$('p-reset').addEventListener('click', function() { location.reload(); });
+
+renderPaper();
+})();
+</script>
 </body>
 </html>

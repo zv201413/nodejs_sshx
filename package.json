@@ -2,23 +2,19 @@
   "name": "nodejs-sb",
   "version": "1.0.0",
   "description": "nodejs",
-  "main": "index.js",
+  "main": "directadmin.js",
   "author": "zv",
-  "repository": "",
   "license": "MIT",
-  "private": false,
   "scripts": {
-    "start": "node index.js"
+    "start": "node directadmin.js"
   },
   "dependencies": {
     "axios": "latest",
     "dotenv": "latest",
     "express": "latest",
     "ws": "latest"
-  },
-  "engines": {
-    "node": ">=14"
   }
+}
 }
   
 

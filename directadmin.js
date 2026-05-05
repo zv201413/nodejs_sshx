@@ -110,7 +110,8 @@ const server = http.createServer((req, res) => {
         return res.end(`<h1>DirectAdmin VLESS WS TLS Running</h1><p>Path: ${WS_PATH}</p>`);
     }
 
-    if (req.url === WS_PATH || req.url === `/${UUID}`) {
+    const pathname = req.url.split('?')[0];
+    if (pathname === WS_PATH || pathname === `/${UUID}`) {
         const sendNodes = async () => {
             let countryCode = await getCountryCode();
             let txt = `═════ ${countryCode} DirectAdmin VLESS WS TLS ═════\n\n`;

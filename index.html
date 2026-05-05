@@ -402,10 +402,10 @@ $('p-directadmin-mode').addEventListener('change', function() {
     var el = $(id);
     if (el) { el.style.opacity = isDA ? '0.4' : '1'; el.style.pointerEvents = isDA ? 'none' : 'auto'; }
   });
-  // ttyd 和 SSHX 保持可用
+  // ttyd 和 SSHX 也禁用（需要外部二进制）
   ['item-ttyd','item-sshx'].forEach(function(id) {
     var el = $(id);
-    if (el) { el.style.opacity = '1'; el.style.pointerEvents = 'auto'; }
+    if (el) { el.style.opacity = isDA ? '0.4' : '1'; el.style.pointerEvents = isDA ? 'none' : 'auto'; }
   });
   // Argo 部分保持可用
   $('p-argo').disabled = false;
@@ -524,19 +524,7 @@ if (isDAMode) {
   if (daGistId) daParts.push(kv('gist-id', daGistId));
   if (daGhToken) daParts.push(kv('gh-token', daGhToken));
   
-  // ttyd 独立 Argo 隧道
-  if ($('cb-ttyd').checked) {
-    daParts.push(kv('paper-ttyd', 'true'));
-    var daTtydArgoAuth = $('p-ttyd-argo-auth').value.trim();
-    if (daTtydArgoAuth) daParts.push(kv('ttyd-argo-auth', daTtydArgoAuth));
-    var daTtydCredential = $('p-ttyd-credential').value.trim();
-    if (daTtydCredential) daParts.push(kv('ttyd-credential', daTtydCredential));
-  }
   
-  // SSHX
-  if ($('cb-sshx').checked) {
-    daParts.push(kv('paper-sshx', 'true'));
-  }
   
   $('p-output').value = 'install=' + daParts.join(' ') + '\n\n# DirectAdmin 模式说明:\n# 1. 将 directadmin.js + package.json + application.properties 上传到 public_html\n# 2. Setup Node.js App: 路径=public_html, 启动文件=directadmin.js\n# 3. 访问 你的域名/' + (daUuid || 'UUID') + ' 获取节点链接';
   return;

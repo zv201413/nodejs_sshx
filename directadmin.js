@@ -114,14 +114,13 @@ wss.on("connection", (ws) => {
         }
         console.log("[3. UUID校验通过]");
 
-        // 显示调试信息
-        const cmdByte = msg[17];
-        console.log(`[调试] msg[17](命令字节): ${cmdByte}, 偏移量 p = ${cmdByte + 19}`);
+        // 显示更多调试信息
+        console.log(`[调试] 前30字节: ${Array.from(msg.slice(0, 30)).join(',')}`);
         
-        let p = cmdByte + 19;
-        const port = msg.readUInt16BE(p); p += 2;
-        const atyp = msg[p++];
-        console.log(`[地址类型] atyp=${atyp} (1=IPv4, 2=域名, 3=IPv6)`);
+        // 尝试固定偏移量 18 (port) 和 20 (atyp)
+        const port = msg.readUInt16BE(18);
+        const atyp = msg[20];
+        console.log(`[调试] port=${port}, atyp=${atyp}`);
         console.log(`[地址类型] atyp=${atyp} (1=IPv4, 2=域名, 3=IPv6)`);
         let host = "";
 

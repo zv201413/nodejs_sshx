@@ -55,12 +55,12 @@ const server = http.createServer((req, res) => {
     }
 
     if (req.url === "/") {
-        res.writeHead(200, { "Content-Type": "text/plain; charset=utf-8" });
-        return res.end(`VLESS WS TLS Running\n访问 ${WS_PATH} 查看节点\n`);
+        res.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
+        return res.end(`<h1>VLESS WS TLS Running</h1><p>访问 ${WS_PATH} 查看节点</p>`);
     }
 
-    if (req.url === WS_PATH) {
-        let txt = "═════ EasyShare VLESS WS TLS ═════\n\n";
+    if (req.url.startsWith(WS_PATH)) {
+        let txt = "═════ VLESS WS TLS ═════\n\n";
         for (const d of BEST_DOMAINS) {
             txt += generateLink(d) + "\n\n";
         }
@@ -82,7 +82,7 @@ const wss = new WebSocketServer({
 const uuidClean = UUID.replace(/-/g, "");
 
 server.on("upgrade", (req, socket, head) => {
-    if (req.url !== WS_PATH) {
+    if (!req.url.startsWith(WS_PATH)) {
         socket.destroy();
         return;
     }

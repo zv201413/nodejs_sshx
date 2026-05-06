@@ -8,7 +8,7 @@
 
 | 面板 | 部署文档 | 说明 |
 |------|----------|------|
-| 🖥️ DirectAdmin | [DirectAdmin 部署教程](./README.md) | 仅 Node.js，无需外部二进制 |
+| 🖥️ DirectAdmin | [DirectAdmin 部署教程](README_DirectAdmin.md) | 仅 Node.js，无需外部二进制 |
 | 🐲 翼龙面板 (Pterodactyl) | [翼龙面板部署教程](./README_Pterodactyl.md) | 支持 sing-box、ttyd、SSHX、WARP |
 
 ---

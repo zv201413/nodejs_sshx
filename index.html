@@ -399,18 +399,20 @@ $('p-directadmin-mode').addEventListener('change', function() {
   $('da-ttyd-row').style.display = isDA ? 'grid' : 'none';
   // DirectAdmin 模式：只禁用协议选择，输入框保持可用（需要填写域名）
   // DirectAdmin 只支持 VLESS-WS，其他协议禁用
-  if (isDA && $('cb-vmess').checked) {
+  if (isDA && $('cb-vmess')) {
     $('cb-vmess').checked = false;
-    $('item-vmess').classList.remove('active');
+    $('cb-vmess').disabled = true;
   }
   var disabledProtocols = ['item-vmess','item-anpt','item-s5','item-hypt','item-tupt'];
   disabledProtocols.forEach(function(id) {
     var el = $(id);
-    if (el) { el.style.opacity = isDA ? '0.4' : '1'; el.style.pointerEvents = isDA ? 'none' : 'auto'; }
+    if (el) { 
+      el.style.opacity = isDA ? '0.4' : '1'; 
+      el.style.pointerEvents = isDA ? 'none' : 'auto';
+      var checkbox = el.querySelector('input[type="checkbox"]');
+      if (checkbox) checkbox.disabled = isDA;
+    }
   });
-  // VMess 额外禁用
-  var vmessItem = $('item-vmess');
-  if (vmessItem) vmessItem.style.opacity = isDA ? '0.4' : '1';
   // ttyd 和 SSHX 也禁用（需要外部二进制）
   ['item-ttyd','item-sshx'].forEach(function(id) {
     var el = $(id);

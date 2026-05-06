@@ -117,6 +117,7 @@ wss.on("connection", (ws) => {
         let p = msg[17] + 19;
         const port = msg.readUInt16BE(p); p += 2;
         const atyp = msg[p++];
+        console.log(`[地址类型] atyp=${atyp} (1=IPv4, 2=域名, 3=IPv6)`);
         let host = "";
 
         if (atyp === 1) { host = Array.from(msg.slice(p, p + 4)).join("."); p += 4; }
@@ -125,6 +126,17 @@ wss.on("connection", (ws) => {
             const raw = msg.slice(p, p + 16); const parts = [];
             for (let i = 0; i < 16; i += 2) parts.push(raw.readUInt16BE(i).toString(16));
             host = parts.join(":"); p += 16;
+        }
+        else {
+            console.error(`[地址解析失败] 不支持的 atyp: ${atyp}`);
+            ws.close();
+            return;
+        }
+
+        if (!host) {
+            console.error("[地址解析失败] host为空");
+            ws.close();
+            return;
         }
 
         console.log(`[4. 目标请求] 协议版本: ${version} | 地址: ${host}:${port}`);

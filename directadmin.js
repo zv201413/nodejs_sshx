@@ -114,8 +114,10 @@ wss.on("connection", (ws) => {
         }
         console.log("[3. UUID校验通过]");
 
-        let p = msg[17] + 19;
-        const port = msg.readUInt16BE(p); p += 2;
+        // VLESS 协议结构: version(1) + UUID(16) + command(1) + port(2) + atyp(1) + address
+        // 跳过 version + UUID (17字节)，command(1字节)，port(2字节) = 从第20字节开始读地址类型
+        let p = 20;
+        const port = msg.readUInt16BE(18);
         const atyp = msg[p++];
         console.log(`[地址类型] atyp=${atyp} (1=IPv4, 2=域名, 3=IPv6)`);
         let host = "";

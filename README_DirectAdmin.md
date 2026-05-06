@@ -1,10 +1,19 @@
-# DirectAdmin 部署教程
+# nodejs-sshx 多面板部署教程
 
-支持 **VLESS-WS** 节点部署，仅需 Node.js + ws，无需外部二进制。
+支持**翼龙面板**和**DirectAdmin面板**的 Node.js 脚本，一键部署 **VLESS-WS**，并自动同步到 GitHub Gist。
 
 ---
 
-## 部署步骤
+## 两种模式
+
+| 模式 | 面板 | 依赖 |
+|------|------|------|
+| 完整模式 | 翼龙面板 (Pterodactyl) | sing-box, cloudflared 等外部二进制 |
+| DirectAdmin 模式 | DirectAdmin | 仅 Node.js + ws |
+
+---
+
+## DirectAdmin 部署步骤
 
 ### 方法一：使用网页面板（推荐）
 

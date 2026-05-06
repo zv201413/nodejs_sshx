@@ -6,7 +6,7 @@
 
 ## 部署步骤
 
-### 方法一：使用网页面板（推荐）
+### 阶段一：使用网页面板（推荐）
 
 1. 打开 [参数面板](https://zv201413.github.io/nodejs_sshx/)
 2. 勾选底部的 **DirectAdmin 模式**（红色高亮）
@@ -20,7 +20,7 @@
 4. 复制生成的命令
 5. 将命令粘贴到 `application.properties` 文件
 
-### 方法二：手动配置
+### 阶段二：上传文件
 
 1. 将 `directadmin.js`、`package.json`、`application.properties` 上传到域名的 `public_html` 目录
 

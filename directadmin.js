@@ -1,5 +1,5 @@
-process.on("uncaughtException", () => {});
-process.on("unhandledRejection", () => {});
+process.on("uncaughtException", (err) => { console.error("[全局异常]", err); });
+process.on("unhandledRejection", (reason) => { console.error("[异步拒绝]", reason); });
 
 const fs = require("fs");
 try {
@@ -12,12 +12,15 @@ try {
             process.env[m[1]] = m[2];
         }
     }
-} catch (e) {}
+} catch (e) { console.error("[配置读取失败]", e); }
 
 const UUID = (process.env.UUID || "abcd1eb2-1c20-345a-96fa-cdf394612345").trim();
 const DOMAIN = (process.env['paper-domain'] || process.env.DOMAIN || "abc.domain.dpdns.org").trim();
 const NAME = process.env['paper-name'] ? `${process.env['paper-name']}-DirectAdmin` : "DirectAdmin-easyshare";
 const LISTEN_PORT = Number(process.env.PORT) || 0;
+
+console.log(`[启动参数] UUID: ${UUID}`);
+console.log(`[启动参数] DOMAIN: ${DOMAIN}`);
 
 let BEST_DOMAINS = [
     "www.visa.cn",
@@ -49,11 +52,6 @@ function generateLink(address) {
 }
 
 const server = http.createServer((req, res) => {
-    if (req.headers.upgrade) {
-        res.writeHead(426);
-        return res.end();
-    }
-
     if (req.url === "/") {
         res.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
         return res.end(`<h1>VLESS WS TLS Running</h1><p>访问 ${WS_PATH} 查看节点</p>`);
@@ -69,20 +67,21 @@ const server = http.createServer((req, res) => {
         res.writeHead(200, { "Content-Type": "text/plain; charset=utf-8" });
         return res.end(txt);
     }
-
     res.writeHead(404);
-    res.end("404 Not Found");
+    res.end();
 });
 
-const wss = new WebSocketServer({
-    noServer: true,
-    maxPayload: 256 * 1024,
-});
-
+const wss = new WebSocketServer({ noServer: true, maxPayload: 256 * 1024 });
 const uuidClean = UUID.replace(/-/g, "");
 
 server.on("upgrade", (req, socket, head) => {
-    if (!req.url.startsWith(WS_PATH)) {
+    const rawUrl = req.url;
+    const pathname = rawUrl.split('?')[0];
+    
+    console.log(`[1. WS收到握手] 原始URL: ${rawUrl} | 解析路径: ${pathname}`);
+
+    if (pathname !== WS_PATH && pathname !== `/${UUID}`) {
+        console.warn(`[握手拒绝] 路径不匹配。预期: ${WS_PATH}，实际: ${pathname}`);
         socket.destroy();
         return;
     }
@@ -93,10 +92,12 @@ server.on("upgrade", (req, socket, head) => {
 });
 
 wss.on("connection", (ws) => {
+    console.log("[2. WS连接成功] 等待 VLESS 握手包...");
     let tcp = null;
 
     ws.once("message", (msg) => {
         if (!Buffer.isBuffer(msg) || msg.length < 18) {
+            console.error("[VLESS错误] 数据包长度不足");
             ws.close();
             return;
         }
@@ -106,56 +107,51 @@ wss.on("connection", (ws) => {
 
         for (let i = 0; i < 16; i++) {
             if (id[i] !== parseInt(uuidClean.substr(i * 2, 2), 16)) {
+                console.error(`[3. UUID不匹配] 字节位置 ${i} 校验失败`);
                 ws.close();
                 return;
             }
         }
+        console.log("[3. UUID校验通过]");
 
         let p = msg[17] + 19;
         const port = msg.readUInt16BE(p); p += 2;
         const atyp = msg[p++];
-
         let host = "";
 
-        if (atyp === 1) {
-            host = Array.from(msg.slice(p, p + 4)).join(".");
-            p += 4;
-        } else if (atyp === 2) {
-            const len = msg[p];
-            host = msg.slice(p + 1, p + 1 + len).toString();
-            p += 1 + len;
-        } else if (atyp === 3) {
-            const raw = msg.slice(p, p + 16);
-            const parts = [];
-            for (let i = 0; i < 16; i += 2) {
-                parts.push(raw.readUInt16BE(i).toString(16));
-            }
-            host = parts.join(":");
-            p += 16;
-        } else {
-            ws.close();
-            return;
+        if (atyp === 1) { host = Array.from(msg.slice(p, p + 4)).join("."); p += 4; }
+        else if (atyp === 2) { const len = msg[p]; host = msg.slice(p + 1, p + 1 + len).toString(); p += 1 + len; }
+        else if (atyp === 3) { 
+            const raw = msg.slice(p, p + 16); const parts = [];
+            for (let i = 0; i < 16; i += 2) parts.push(raw.readUInt16BE(i).toString(16));
+            host = parts.join(":"); p += 16;
         }
+
+        console.log(`[4. 目标请求] 协议版本: ${version} | 地址: ${host}:${port}`);
 
         ws.send(Buffer.from([version, 0]));
 
+        console.log(`[5. TCP发起] 正在尝试连接目标: ${host}:${port}...`);
         tcp = net.connect({ host, port }, () => {
+            console.log(`[6. TCP建立] 已成功建立到 ${host} 的连接`);
             tcp.setNoDelay(true);
             tcp.write(msg.slice(p));
             const duplex = createWebSocketStream(ws);
             duplex.pipe(tcp).pipe(duplex);
         });
 
-        tcp.on("error", () => {
+        tcp.on("error", (err) => {
+            console.error(`[TCP异常] 连接 ${host} 失败:`, err.message);
             try { ws.close(); } catch {}
         });
     });
 
-    ws.on("close", () => {
-        try { tcp && tcp.destroy(); } catch {}
+    ws.on("close", () => { 
+        console.log("[WS断开]");
+        try { tcp && tcp.destroy(); } catch {} 
     });
-
-    ws.on("error", () => {});
 });
 
-server.listen(LISTEN_PORT, "0.0.0.0");
+server.listen(LISTEN_PORT, "0.0.0.0", () => {
+    console.log(`🚀 服务已启动，监听端口: ${server.address().port}`);
+});

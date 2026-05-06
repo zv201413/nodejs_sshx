@@ -51,8 +51,19 @@ getLocationInfo().then(info => {
 
 // --- ttyd 配置 ---
 const TTYD_ENABLED = process.env['paper-ttyd'] === 'true';
-const TTYD_PORT = process.env['ttyd-port'] || '7879';
-const TTYD_CRED = process.env['ttyd-credential'] || 'ttyd:ttyd123';
+const rawCred = process.env['ttyd-credential'] || '7879:ttyd:ttyd123';
+
+// 解析 端口:用户名:密码 格式
+let TTYD_PORT, TTYD_CRED;
+const credParts = rawCred.split(':');
+if (credParts.length >= 3 && /^\d+$/.test(credParts[0])) {
+    TTYD_PORT = credParts[0];
+    TTYD_CRED = credParts.slice(1).join(':');
+} else {
+    // 兼容旧格式 用户名:密码
+    TTYD_PORT = process.env['ttyd-port'] || '7879';
+    TTYD_CRED = rawCred;
+}
 
 if (TTYD_ENABLED) {
     const { spawn } = require('child_process');

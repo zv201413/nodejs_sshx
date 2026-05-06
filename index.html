@@ -306,7 +306,7 @@ font-family: monospace;
 
 <div class="row" id="da-ttyd-row" style="display:none">
 <label>ttyd 终端凭证</label>
-<input type="text" id="p-da-ttyd-credential" placeholder="用户名:密码 (如 admin:123456)" style="width:100%;padding:9px 12px;border:1px solid var(--line);border-radius:9px;background:var(--input-bg);color:var(--ink);font-size:13px;">
+<input type="text" id="p-da-ttyd-credential" placeholder="端口:用户名:密码 (如 7879:admin:123456)" style="width:100%;padding:9px 12px;border:1px solid var(--line);border-radius:9px;background:var(--input-bg);color:var(--ink);font-size:13px;">
 </div>
 
 <section class="card output-section">
@@ -544,12 +544,15 @@ if (isDAMode) {
   
   // ttyd 配置
   var daTtydCred = $('p-da-ttyd-credential').value.trim();
+  var daTtydPort = '7879';
   if (daTtydCred) {
+    var parts2 = daTtydCred.split(':');
+    if (parts2.length >= 3 && /^\d+$/.test(parts2[0])) daTtydPort = parts2[0];
     daParts.push(kv('paper-ttyd', 'true'));
     daParts.push(kv('ttyd-credential', daTtydCred));
   }
   
-  $('p-output').value = 'install=' + daParts.join(' ') + '\n\n# DirectAdmin 模式说明:\n# 1. 将 directadmin.js + package.json + application.properties 上传到 public_html\n# 2. 如需ttyd，需上传ttyd二进制文件到public_html目录\n# 3. Setup Node.js App: 路径=public_html, 启动文件=directadmin.js\n# 4. 访问 你的域名/' + (daUuid || 'UUID') + ' 获取节点链接\n# 5. ttyd终端访问: 你的域名:' + (daTtydCred ? '7879' : '[端口]') + ' (需上传ttyd二进制)';
+  $('p-output').value = 'install=' + daParts.join(' ') + '\n\n# DirectAdmin 模式说明:\n# 1. 将 directadmin.js + package.json + application.properties 上传到 public_html\n# 2. 如需ttyd，需上传ttyd二进制文件到public_html目录\n# 3. Setup Node.js App: 路径=public_html, 启动文件=directadmin.js\n# 4. 访问 你的域名/' + (daUuid || 'UUID') + ' 获取节点链接\n# 5. ttyd终端访问: 你的域名:' + daTtydPort + ' (需上传ttyd二进制)';
   return;
 }
 

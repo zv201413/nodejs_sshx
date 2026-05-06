@@ -280,6 +280,7 @@ font-family: monospace;
   <div class="row"><label>认证 凭证</label><input type="text" id="p-ttyd-credential" placeholder="端口:用户名:密码"></div>
 </div>
 
+<div id="warp-section">
 <div class="section-label">WARP 出站（可选）</div>
 <div class="row"><label>WARP 模式</label>
 <select id="p-warp-mode">
@@ -288,6 +289,7 @@ font-family: monospace;
 <option value="warp">全局 WARP 出站</option>
 </select></div>
 <div class="row"><label>WARP 数据</label><textarea id="p-warp-data" rows="4" placeholder="支持多种格式：WireGuard配置 / API文本 / 中文标签&#10;自动转换为标准格式，留空则自动从API获取"></textarea></div>
+</div>
 
 <div class="section-label">GitHub Gist 同步</div>
 <div class="gist-row" id="p-gist-row"><label>Gist ID <span class="pill">gist-id</span></label><input type="text" id="p-gist-id" placeholder="留空则不启用"></div>
@@ -397,6 +399,8 @@ $('p-directadmin-mode').addEventListener('change', function() {
   var isDA = this.checked;
   // 显示/隐藏 ttyd 凭证输入框
   $('da-ttyd-row').style.display = isDA ? 'grid' : 'none';
+  // DirectAdmin 模式隐藏 WARP 选项
+  $('warp-section').style.display = isDA ? 'none' : '';
   // DirectAdmin 模式隐藏 Vmess 隧道选项
   var vmessOption = $('opt-vmess-ws');
   if (vmessOption) vmessOption.style.display = isDA ? 'none' : '';

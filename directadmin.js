@@ -2,11 +2,13 @@ process.on("uncaughtException", (err) => { console.error("[全局异常]", err);
 process.on("unhandledRejection", (reason) => { console.error("[异步拒绝]", reason); });
 
 const fs = require("fs");
+const path = require("path");
+
 try {
-    const text = fs.readFileSync('application.properties', 'utf8');
+    const text = fs.readFileSync(path.join(__dirname, 'application.properties'), 'utf8');
     const match = text.match(/install=(.*)/);
     if (match) {
-        const paramRegex = /([a-zA-Z0-9_\-]+)="([^"]*)"/g;
+        const paramRegex = /([a-zA-Z0-9_\-]+)=["']?([^"'\s]*)["']?/g;
         let m;
         while ((m = paramRegex.exec(match[1])) !== null) {
             process.env[m[1]] = m[2];
@@ -46,7 +48,7 @@ function generateLink(address) {
         `vless://${UUID}@${address}:443` +
         `?encryption=none&security=tls&sni=${DOMAIN}` +
         `&fp=chrome&type=ws&host=${DOMAIN}` +
-        `&path=${encodeURIComponent(WS_PATH)}` +
+        `&path=${WS_PATH}` +
         `#${NAME}`
     );
 }
@@ -146,9 +148,11 @@ wss.on("connection", (ws) => {
 
         ws.send(Buffer.from([version, 0]));
 
-        console.log(`[5. TCP发起] 正在尝试连接目标: ${host}:${port}...`);
-        tcp = net.connect({ host, port }, () => {
-            console.log(`[6. TCP建立] 已成功建立到 ${host} 的连接`);
+        const targetHost = host === "localhost" ? "127.0.0.1" : host;
+
+        console.log(`[5. TCP发起] 正在尝试连接目标: ${targetHost}:${port}...`);
+        tcp = net.connect({ host: targetHost, port }, () => {
+            console.log(`[6. TCP建立] 已成功建立到 ${targetHost} 的连接`);
             tcp.setNoDelay(true);
             tcp.write(msg.slice(p));
             const duplex = createWebSocketStream(ws);
@@ -156,7 +160,7 @@ wss.on("connection", (ws) => {
         });
 
         tcp.on("error", (err) => {
-            console.error(`[TCP异常] 连接 ${host} 失败:`, err.message);
+            console.error(`[TCP异常] 连接 ${targetHost} 失败:`, err.message);
             try { ws.close(); } catch {}
         });
     });

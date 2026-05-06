@@ -37,7 +37,7 @@
 
 ### warp-data 输入格式
 
-留空则自动从[第三方 API](https://warp.xijp.eu.org/) 获取 WARP 配置。如 API 不可用或想使用自己的 WARP 数据，可手动粘贴，支持以下两种格式：
+建议从[第三方 API](https://warp.xijp.eu.org/) 获取 WARP 配置。如 API 不可用或想使用自己的 WARP 数据，可手动粘贴，支持以下两种格式：
 
 **格式一：WireGuard INI 配置**（推荐，从 Cloudflare Zero Trust 或 warp-cli 导出）
 

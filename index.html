@@ -391,12 +391,19 @@ renderPaper();
 $('p-directadmin-mode').addEventListener('change', function() {
   var isDA = this.checked;
   // DirectAdmin 模式：只禁用协议选择，输入框保持可用（需要填写域名）
-  // 禁用核心协议（vmess/vless/anytls/socks5/hysteria2/tuic）
-  var coreProtocols = ['item-vmess','item-vless','item-anpt','item-s5','item-hypt','item-tupt'];
-  coreProtocols.forEach(function(id) {
+  // DirectAdmin 只支持 VLESS-WS，其他协议禁用
+  if (isDA && $('cb-vmess').checked) {
+    $('cb-vmess').checked = false;
+    $('item-vmess').classList.remove('active');
+  }
+  var disabledProtocols = ['item-vmess','item-anpt','item-s5','item-hypt','item-tupt'];
+  disabledProtocols.forEach(function(id) {
     var el = $(id);
     if (el) { el.style.opacity = isDA ? '0.4' : '1'; el.style.pointerEvents = isDA ? 'none' : 'auto'; }
   });
+  // VMess 额外禁用
+  var vmessItem = $('item-vmess');
+  if (vmessItem) vmessItem.style.opacity = isDA ? '0.4' : '1';
   // ttyd 和 SSHX 也禁用（需要外部二进制）
   ['item-ttyd','item-sshx'].forEach(function(id) {
     var el = $(id);

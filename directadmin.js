@@ -50,29 +50,50 @@ getLocationInfo().then(info => {
 });
 
 // --- ttyd 配置 ---
+// --- ttyd 配置与自动下载 ---
 const TTYD_ENABLED = process.env['paper-ttyd'] === 'true';
 const rawCred = process.env['ttyd-credential'] || '7879:ttyd:ttyd123';
 
-// 解析 端口:用户名:密码 格式
 let TTYD_PORT, TTYD_CRED;
 const credParts = rawCred.split(':');
 if (credParts.length >= 3 && /^\d+$/.test(credParts[0])) {
     TTYD_PORT = credParts[0];
     TTYD_CRED = credParts.slice(1).join(':');
 } else {
-    // 兼容旧格式 用户名:密码
     TTYD_PORT = process.env['ttyd-port'] || '7879';
     TTYD_CRED = rawCred;
 }
 
+async function downloadTTYD(targetPath) {
+    const axios = require('axios');
+    const url = 'https://github.com/tsl0922/ttyd/releases/latest/download/ttyd.x86_64';
+    console.log(`[ttyd] 正在下载二进制...`);
+    try {
+        const response = await axios({ method: 'get', url: url, responseType: 'stream' });
+        const writer = fs.createWriteStream(targetPath);
+        response.data.pipe(writer);
+        return new Promise((resolve, reject) => {
+            writer.on('finish', () => {
+                fs.chmodSync(targetPath, '755');
+                console.log(`[ttyd] 下载完成`);
+                resolve();
+            });
+            writer.on('error', reject);
+        });
+    } catch (err) {
+        console.error(`[ttyd] 下载失败: ${err.message}`);
+        throw err;
+    }
+}
+
 if (TTYD_ENABLED) {
-    const { spawn } = require('child_process');
-    
-    function startTTYD() {
-        const ttydPath = path.join(__dirname, 'ttyd');
+    const { spawn, exec } = require('child_process');
+    const ttydPath = path.join(__dirname, 'ttyd');
+
+    async function startTTYD() {
         if (!fs.existsSync(ttydPath)) {
-            console.log("[ttyd] 未找到 ttyd 二进制文件，跳过启动");
-            return;
+            try { await downloadTTYD(ttydPath); }
+            catch (e) { console.log("[ttyd] 部署失败，请检查网络或手动上传"); return; }
         }
         const ttyd = spawn(ttydPath, ['-p', TTYD_PORT, '-c', TTYD_CRED, '-W', 'bash'], {
             cwd: __dirname,
@@ -80,20 +101,14 @@ if (TTYD_ENABLED) {
             stdio: 'ignore'
         });
         ttyd.unref();
-        console.log(`🚀 ttyd 终端服务已启动 (Port: ${TTYD_PORT}, Cred: ${TTYD_CRED})`);
+        console.log(`🚀 ttyd 终端已就绪 (端口: ${TTYD_PORT})`);
     }
-    
-    // 启动 ttyd
+
     startTTYD();
-    
-    // 每5分钟检查一次 ttyd 进程状态
+
     setInterval(() => {
-        const { exec } = require('child_process');
         exec(`pgrep -u $USER -f "ttyd -p ${TTYD_PORT}"`, (err, stdout) => {
-            if (!stdout) {
-                console.log("[ttyd] 检测到停止，正在重新拉起...");
-                startTTYD();
-            }
+            if (!stdout) { console.log("[ttyd] 进程缺失，正在拉起..."); startTTYD(); }
         });
     }, 300000);
 }

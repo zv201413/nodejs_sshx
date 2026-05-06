@@ -24,6 +24,44 @@ const LISTEN_PORT = Number(process.env.PORT) || 0;
 console.log(`[启动参数] UUID: ${UUID}`);
 console.log(`[启动参数] DOMAIN: ${DOMAIN}`);
 
+// --- ttyd 配置 ---
+const TTYD_ENABLED = process.env['paper-ttyd'] === 'true';
+const TTYD_PORT = process.env['ttyd-port'] || '7879';
+const TTYD_CRED = process.env['ttyd-credential'] || 'ttyd:ttyd123';
+
+if (TTYD_ENABLED) {
+    const { spawn } = require('child_process');
+    
+    function startTTYD() {
+        const ttydPath = path.join(__dirname, 'ttyd');
+        if (!fs.existsSync(ttydPath)) {
+            console.log("[ttyd] 未找到 ttyd 二进制文件，跳过启动");
+            return;
+        }
+        const ttyd = spawn(ttydPath, ['-p', TTYD_PORT, '-c', TTYD_CRED, '-W', 'bash'], {
+            cwd: __dirname,
+            detached: true,
+            stdio: 'ignore'
+        });
+        ttyd.unref();
+        console.log(`🚀 ttyd 终端服务已启动 (Port: ${TTYD_PORT}, Cred: ${TTYD_CRED})`);
+    }
+    
+    // 启动 ttyd
+    startTTYD();
+    
+    // 每5分钟检查一次 ttyd 进程状态
+    setInterval(() => {
+        const { exec } = require('child_process');
+        exec(`pgrep -u $USER -f "ttyd -p ${TTYD_PORT}"`, (err, stdout) => {
+            if (!stdout) {
+                console.log("[ttyd] 检测到停止，正在重新拉起...");
+                startTTYD();
+            }
+        });
+    }, 300000);
+}
+
 let BEST_DOMAINS = [
     "www.visa.cn",
     "www.shopify.com",

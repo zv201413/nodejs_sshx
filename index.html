@@ -526,9 +526,14 @@ if (isDAMode) {
   if (daGistId) daParts.push(kv('gist-id', daGistId));
   if (daGhToken) daParts.push(kv('gh-token', daGhToken));
   
+  // ttyd 配置
+  var daTtydCred = $('p-ttyd-credential').value.trim();
+  if (daTtydCred) {
+    daParts.push(kv('paper-ttyd', 'true'));
+    daParts.push(kv('ttyd-credential', daTtydCred));
+  }
   
-  
-  $('p-output').value = 'install=' + daParts.join(' ') + '\n\n# DirectAdmin 模式说明:\n# 1. 将 directadmin.js + package.json + application.properties 上传到 public_html\n# 2. Setup Node.js App: 路径=public_html, 启动文件=directadmin.js\n# 3. 访问 你的域名/' + (daUuid || 'UUID') + ' 获取节点链接';
+  $('p-output').value = 'install=' + daParts.join(' ') + '\n\n# DirectAdmin 模式说明:\n# 1. 将 directadmin.js + package.json + application.properties 上传到 public_html\n# 2. 如需ttyd，需上传ttyd二进制文件到public_html目录\n# 3. Setup Node.js App: 路径=public_html, 启动文件=directadmin.js\n# 4. 访问 你的域名/' + (daUuid || 'UUID') + ' 获取节点链接\n# 5. ttyd终端访问: 你的域名:' + (daTtydCred ? '7879' : '[端口]') + ' (需上传ttyd二进制)';
   return;
 }
 

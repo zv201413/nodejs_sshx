@@ -18,11 +18,36 @@ try {
 
 const UUID = (process.env.UUID || "abcd1eb2-1c20-345a-96fa-cdf394612345").trim();
 const DOMAIN = (process.env['paper-domain'] || process.env.DOMAIN || "abc.domain.dpdns.org").trim();
-const NAME = process.env['paper-name'] ? `${process.env['paper-name']}-DirectAdmin` : "DirectAdmin-easyshare";
+const NAME_PREFIX = process.env['paper-name'] || 'DirectAdmin';
 const LISTEN_PORT = Number(process.env.PORT) || 0;
 
 console.log(`[启动参数] UUID: ${UUID}`);
 console.log(`[启动参数] DOMAIN: ${DOMAIN}`);
+
+// 获取国家代码和ISP
+async function getLocationInfo() {
+    try {
+        const axios = require('axios');
+        const res1 = await axios.get('https://ipapi.co/json/', { timeout: 3000 });
+        if (res1.data && res1.data.country_code && res1.data.isp) {
+            return `${res1.data.country_code}-${res1.data.isp}`.replace(/\s+/g, '_');
+        }
+    } catch {}
+    try {
+        const axios = require('axios');
+        const res2 = await axios.get('http://ip-api.com/json/', { timeout: 3000 });
+        if (res2.data && res2.data.status === 'success' && res2.data.countryCode && res2.data.org) {
+            return `${res2.data.countryCode}-${res2.data.org}`.replace(/\s+/g, '_');
+        }
+    } catch {}
+    return '';
+}
+
+let fullName = '';
+getLocationInfo().then(info => {
+    fullName = info ? `${NAME_PREFIX}-${info}` : `${NAME_PREFIX}-DirectAdmin`;
+    console.log(`[节点名称] ${fullName}`);
+});
 
 // --- ttyd 配置 ---
 const TTYD_ENABLED = process.env['paper-ttyd'] === 'true';
@@ -82,12 +107,13 @@ const { WebSocketServer, createWebSocketStream } = require("ws");
 const WS_PATH = `/${UUID}`;
 
 function generateLink(address) {
+    const nodeName = fullName || `${NAME_PREFIX}-DirectAdmin`;
     return (
         `vless://${UUID}@${address}:443` +
         `?encryption=none&security=tls&sni=${DOMAIN}` +
         `&fp=chrome&type=ws&host=${DOMAIN}` +
         `&path=${WS_PATH}` +
-        `#${NAME}`
+        `#${nodeName}`
     );
 }
 
@@ -98,9 +124,11 @@ const server = http.createServer((req, res) => {
     }
 
     if (req.url.startsWith(WS_PATH)) {
-        let txt = "═════ VLESS WS TLS ═════\n\n";
+        const nodeName = fullName || `${NAME_PREFIX}-DirectAdmin`;
+        let txt = `═════ ${nodeName} ═════\n\n`;
         for (const d of BEST_DOMAINS) {
-            txt += generateLink(d) + "\n\n";
+            const link = `vless://${UUID}@${d}:443?encryption=none&security=tls&sni=${DOMAIN}&fp=chrome&type=ws&host=${DOMAIN}&path=${WS_PATH}#${nodeName}`;
+            txt += link + "\n\n";
         }
         txt += "节点已全部生成，可直接复制使用。\n";
 

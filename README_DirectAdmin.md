@@ -31,7 +31,6 @@
 3. 点击 **CREATE APPLICATION**，执行 **Run NPM Install**，启动 **Run JS script**
 
 4. 访问 `你的域名/UUID` 查看节点链接
-
 ---
 
 ## 配置参数说明

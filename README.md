@@ -122,6 +122,23 @@ A: 程序会自动调用 IP API 获取国家代码和 ISP 信息
 **Q: Gist 同步失败？**
 A: 检查 `gist-id` 和 `gh-token` 是否正确
 
+**Q: DirectAdmin 模式下节点连不上？**
+A: 检查代理软件是否开启了**多路复用 (Mux)**，如有请关闭。Mux 会导致 VLESS 协议解析失败。
+
+---
+
+## 进程管理
+
+### 杀掉运行中的进程
+
+```bash
+pkill -9 -u $USER -f "node directadmin.js|node index.js" || echo "没有发现运行中的相关进程"
+```
+
+### 查看运行日志
+
+DirectAdmin 后台 Node.js 应用查看实时日志
+
 ---
 
 MIT - 本项目仅供技术研究与学习使用

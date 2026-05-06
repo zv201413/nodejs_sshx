@@ -388,7 +388,7 @@ if (v === 'vless-ws') { $('cb-vless').checked = true; $('item-vless').classList.
 renderPaper();
 });
 
-['p-domain','p-uuid','p-name','p-argo-ip','p-argo-domain','p-argo-token','p-gist-id','p-gist-token','p-ttyd-argo-auth','p-ttyd-credential','p-warp-mode','p-warp-data'].forEach(function(id) {
+['p-domain','p-uuid','p-name','p-argo-ip','p-argo-domain','p-argo-token','p-gist-id','p-gist-token','p-ttyd-argo-auth','p-ttyd-credential','p-warp-mode','p-warp-data','p-da-ttyd-credential'].forEach(function(id) {
   $(id).addEventListener('input', renderPaper);
 });
 

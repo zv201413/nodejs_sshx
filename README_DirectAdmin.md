@@ -52,10 +52,9 @@
 支持多个优选 IP/域名，用 `;` 分隔，程序会为每个生成独立节点。
 
 **示例：**
-```
-paper-argo-ip=104.17.161.169;www.visa.com.sg;www.shopify.com
-```
-生成 3 个节点，分别使用不同的优选地址。
+<img width="772" height="52" alt="image" src="https://github.com/user-attachments/assets/9a26594f-7e14-412a-93db-7149041626ae" />
+
+生成 x 个节点，分别使用不同的优选地址。
 
 ---
 
@@ -81,26 +80,19 @@ https://你的域名:7879
 
 ---
 
-## 进程管理
+## 进阶技巧
 
-### 杀掉所有运行中的进程
+### 重新创建nodejs.app之前可以在web ssh运行以下命令
 
 ```bash
 pkill -9 -u $USER -f "node directadmin.js|node index.js|lsnode" || echo "没有发现运行中的相关进程"
 ```
 
-### 查看运行日志
-
-DirectAdmin 后台 Node.js 应用查看实时日志
-
----
-
 ## ⚠️ 注意事项
 
 - **多路复用 (Mux)**：DirectAdmin 模式下务必关闭代理软件的 Mux 功能，否则节点无法连接
-- **WARP 出站**：DirectAdmin 模式不支持 WARP（需要外部二进制）
-- **VMess 协议**：DirectAdmin 模式仅支持 VLESS-WS
+
 
 ---
-
-MIT - 本项目仅供技术研究与学习使用
+## 鸣谢
+[DirectAdmin-Vless-ws-tls](https://github.com/eishare/DirectAdmin-Vless-ws-tls)

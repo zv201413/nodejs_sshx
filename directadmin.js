@@ -113,6 +113,10 @@ if (TTYD_ENABLED) {
     }, 300000);
 }
 
+// --- Gist 配置 ---
+const GIST_ID = process.env['gist-id'] || '';
+const GH_TOKEN = process.env['gh-token'] || '';
+
 let BEST_DOMAINS = [
     "www.visa.cn",
     "www.shopify.com",
@@ -157,6 +161,16 @@ const server = http.createServer((req, res) => {
             txt += link + "\n\n";
         }
         txt += "节点已全部生成，可直接复制使用。\n";
+
+        // Gist 同步
+        if (GIST_ID && GH_TOKEN) {
+            const axios = require('axios');
+            axios.patch(`https://api.github.com/gists/${GIST_ID}`, {
+                files: { "nodes.txt": { content: txt } }
+            }, {
+                headers: { Authorization: `token ${GH_TOKEN}`, Accept: "application/vnd.github.v3+json" }
+            }).then(() => console.log("[Gist] 同步成功")).catch(e => console.log("[Gist] 同步失败"));
+        }
 
         res.writeHead(200, { "Content-Type": "text/plain; charset=utf-8" });
         return res.end(txt);

@@ -304,6 +304,11 @@ font-family: monospace;
 </label>
 </div>
 
+<div class="row" id="da-ttyd-row" style="display:none">
+<label>ttyd 终端凭证</label>
+<input type="text" id="p-da-ttyd-credential" placeholder="用户名:密码 (如 admin:123456)" style="width:100%;padding:9px 12px;border:1px solid var(--line);border-radius:9px;background:var(--input-bg);color:var(--ink);font-size:13px;">
+</div>
+
 <section class="card output-section">
 <h2>一键配置命令</h2>
 <p class="tip">复制下方命令，<strong>整体粘贴</strong>到 <code>application.properties</code> 文件第一行，重启服务器即可。</p>
@@ -390,6 +395,8 @@ renderPaper();
 // DirectAdmin 模式复选框
 $('p-directadmin-mode').addEventListener('change', function() {
   var isDA = this.checked;
+  // 显示/隐藏 ttyd 凭证输入框
+  $('da-ttyd-row').style.display = isDA ? 'grid' : 'none';
   // DirectAdmin 模式：只禁用协议选择，输入框保持可用（需要填写域名）
   // DirectAdmin 只支持 VLESS-WS，其他协议禁用
   if (isDA && $('cb-vmess').checked) {
@@ -527,7 +534,7 @@ if (isDAMode) {
   if (daGhToken) daParts.push(kv('gh-token', daGhToken));
   
   // ttyd 配置
-  var daTtydCred = $('p-ttyd-credential').value.trim();
+  var daTtydCred = $('p-da-ttyd-credential').value.trim();
   if (daTtydCred) {
     daParts.push(kv('paper-ttyd', 'true'));
     daParts.push(kv('ttyd-credential', daTtydCred));

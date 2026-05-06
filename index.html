@@ -266,8 +266,8 @@ font-family: monospace;
 <div class="row"><label>隧道协议</label>
 <select id="p-argo">
 <option value="">关闭（直连模式）</option>
-<option value="vmess-ws">Vmess-WS + 隧道</option>
-<option value="vless-ws">VLESS-WS + 隧道</option>
+<option value="vless-ws" id="opt-vless-ws">VLESS-WS + 隧道</option>
+<option value="vmess-ws" id="opt-vmess-ws" style="display:none">Vmess-WS + 隧道</option>
 </select>
 </div>
 <div class="row" id="p-argo-domain-row" style="display:none"><label>固定域名</label><input type="text" id="p-argo-domain" placeholder="留空则临时隧道"></div>
@@ -397,6 +397,13 @@ $('p-directadmin-mode').addEventListener('change', function() {
   var isDA = this.checked;
   // 显示/隐藏 ttyd 凭证输入框
   $('da-ttyd-row').style.display = isDA ? 'grid' : 'none';
+  // DirectAdmin 模式隐藏 Vmess 隧道选项
+  var vmessOption = $('opt-vmess-ws');
+  if (vmessOption) vmessOption.style.display = isDA ? 'none' : '';
+  // 如果当前选的是 vmess-ws，切换到 vless-ws
+  if (isDA && $('p-argo').value === 'vmess-ws') {
+    $('p-argo').value = 'vless-ws';
+  }
   // DirectAdmin 模式：只禁用协议选择，输入框保持可用（需要填写域名）
   // DirectAdmin 只支持 VLESS-WS，其他协议禁用
   if (isDA && $('cb-vmess')) {

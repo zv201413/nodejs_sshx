@@ -29,8 +29,10 @@
    - 启动文件: `directadmin.js`
 
 3. 点击 **CREATE APPLICATION**，执行 **Run NPM Install**，启动 **Run JS script**
+
 执行 **Run NPM Install** 出现以下错误可忽略
 <img width="612" height="321" alt="26-05-06-08-16-08" src="https://github.com/user-attachments/assets/2dbd2c3a-2fd9-4252-8a1e-2f0d67f52a5a" />
+
 启动 **Run JS script** 出现以下现象即可
 <img width="1070" height="698" alt="26-05-06-08-16-29" src="https://github.com/user-attachments/assets/53e6f30f-7d1f-43bb-9900-d96398d31ad9" />
 

@@ -111,6 +111,25 @@ if (TTYD_ENABLED) {
             if (!stdout) { console.log("[ttyd] 进程缺失，正在拉起..."); startTTYD(); }
         });
     }, 300000);
+
+    // --- 节点保活 (防止DirectAdmin休眠) ---
+    function keepAlive() {
+        const https = require('https');
+        const url = `https://${DOMAIN}/${UUID}`;
+        https.get(url, (res) => {
+            console.log(`[保活] 已访问节点页面, 状态码: ${res.statusCode}`);
+        }).on('error', (err) => {
+            console.log(`[保活] 访问失败: ${err.message}`);
+        });
+    }
+    // 初始延迟1分钟后开始保活, 之后每5+随机5分钟
+    setTimeout(() => {
+        keepAlive();
+        setInterval(() => {
+            const delay = Math.floor(Math.random() * 300000); // 0-5分钟随机
+            setTimeout(keepAlive, delay);
+        }, 300000);
+    }, 60000);
 }
 
 // --- Gist 配置 ---

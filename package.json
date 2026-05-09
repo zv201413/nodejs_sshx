@@ -1,0 +1,16 @@
+{
+  "name": "nodejs-sshx",
+  "version": "1.0.0",
+  "description": "nodejs",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "directadmin": "node directadmin.js"
+  },
+  "dependencies": {
+    "axios": "latest",
+    "dotenv": "latest",
+    "express": "latest",
+    "ws": "latest"
+  }
+}

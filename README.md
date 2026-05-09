@@ -1,37 +1,46 @@
-# nodejs-sshx
+# nodejs-sshx 多面板部署教程
 
-多面板 Node.js 脚本，支持翼龙/Pterodactyl 和 DirectAdmin
-
-**当前版本**: v1.2.0
-**技术栈**: Node.js, sing-box, Cloudflare Argo, ttyd, SSHX
+支持 **VLESS-WS** 节点部署，自动同步到 GitHub Gist。
 
 ---
 
-## 🌟 核心特色
+## 选择你的面板
 
-- 多协议支持: VLESS-WS, VMess-WS, Hysteria2, TUIC, Reality, SOCKS5, AnyTLS
-- 双网页终端: ttyd + SSHX
-- Cloudflare Argo 隧道
-- GitHub Gist 同步
-- 双面板兼容: index.js + directadmin.js
-
----
-
-## 🚀 快速开始
-
-翼龙: npm start
-DirectAdmin: npm run directadmin
-
+| 面板 | 部署文档 | 说明 |
+|------|----------|------|
+| 🖥️ DirectAdmin | [DirectAdmin 部署教程](README_DirectAdmin.md) | 仅 Node.js，无需外部二进制 |
+| 🐲 翼龙面板 (Pterodactyl) | [翼龙面板部署教程](./README_Pterodactyl.md) | 支持 sing-box、ttyd、SSHX、WARP |
 
 ---
 
-## 🛠️ 环境映射 (Env Mapping)
+## 快速开始
 
-| 变量名 | 说明 | 示例 |
-|:---|:---|:---|
-| 翼龙 | application.properties | install=xxx |
-| DirectAdmin | 环境变量 | NODE_ENV=xxx |
+1. 打开 [参数面板](https://zv201413.github.io/nodejs_sshx/)
+2. 选择你的面板类型
+3. 填写配置，复制生成的命令
+4. 按对应部署文档操作
 
 ---
 
-**文档更新时间**: 2026-05-09
+## 功能对比
+
+| 功能 | DirectAdmin | 翼龙面板 |
+|------|-------------|----------|
+| VLESS-WS | ✅ | ✅ |
+| VMess | ❌ | ✅ |
+| WARP 出站 | ❌ | ✅ |
+| ttyd 网页终端 | ✅ | ✅ |
+| SSHX 网页终端 | ❌ | ✅ |
+| 多优选域名 | ✅ | ✅ |
+| Gist 同步 | ✅ | ✅ |
+
+---
+
+## 注意事项
+
+- **多路复用 (Mux)**：代理软件务必关闭 Mux 功能
+- DirectAdmin 模式仅支持 VLESS-WS 协议
+
+---
+
+MIT - 本项目仅供技术研究与学习使用

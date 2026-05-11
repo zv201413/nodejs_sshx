@@ -30,6 +30,7 @@
    - 启动文件: `directadmin.js`
 
 3. 点击 **CREATE APPLICATION**，执行 **Run NPM Install**，启动 **Run JS script**
+<img width="1694" height="854" alt="image" src="https://github.com/user-attachments/assets/1f7d4b0c-1ddd-4a3c-a9a2-9877f32857e0" />
 
 4. 访问 `你的域名/UUID` 查看节点链接
 

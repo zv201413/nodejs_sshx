@@ -87,12 +87,9 @@ https://你的域名:7879
 ### 重新创建nodejs.app之前可以在web ssh运行以下命令
 
 ```bash
-pkill -9 -f "node directadmin.js" || echo "没有发现运行中的相关进程"
-```
-### 查看占用内存文件
-
-```bash
-du -ah ~ | sort -h -r | head -n 10
+pkill -9 -f "node directadmin.js"
+pkill -9 -f "node index.js"
+pkill -9 -f "lsnode"
 ```
 
 ## ⚠️ 注意事项

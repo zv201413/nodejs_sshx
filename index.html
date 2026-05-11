@@ -424,8 +424,8 @@ $('p-directadmin-mode').addEventListener('change', function() {
       if (checkbox) checkbox.disabled = isDA;
     }
   });
-  // ttyd 支持自动下载，DirectAdmin 模式下保持可用；SSHX 需要外部二进制则禁用
-  ['item-sshx'].forEach(function(id) {
+  // DirectAdmin 模式禁用 ttyd 和 SSHX（ttyd 有独立输入框，SSHX 需要外部二进制）
+  ['item-ttyd','item-sshx'].forEach(function(id) {
     var el = $(id);
     if (el) { el.style.opacity = isDA ? '0.4' : '1'; el.style.pointerEvents = isDA ? 'none' : 'auto'; }
   });

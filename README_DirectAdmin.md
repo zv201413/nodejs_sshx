@@ -87,11 +87,7 @@ https://你的域名:7879
 ### 重新创建nodejs.app之前可以在web ssh运行以下命令
 
 ```bash
-pkill -9 -u $USER -f "node directadmin.js|node index.js|lsnode"
-# 或者分别执行：
-pkill -9 -f "node directadmin.js"
-pkill -9 -f "node index.js"
-pkill -9 -f "lsnode"
+pkill -9 -u $USER -f "node directadmin.js|node index.js|lsnode" || echo "没有发现运行中的相关进程"
 ```
 
 ## ⚠️ 注意事项

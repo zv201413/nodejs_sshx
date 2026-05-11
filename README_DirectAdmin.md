@@ -89,6 +89,11 @@ https://你的域名:7879
 ```bash
 pkill -9 -u $USER -f "node directadmin.js|node index.js|lsnode" || echo "没有发现运行中的相关进程"
 ```
+### 查看占用内存文件
+
+```bash
+du -ah ~ | sort -h -r | head -n 10
+```
 
 ## ⚠️ 注意事项
 

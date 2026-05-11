@@ -293,7 +293,7 @@ font-family: monospace;
 </div>
 
 <div class="section-label">GitHub Gist 同步</div>
-<div class="gist-row" id="p-gist-row"><label>Gist ID <span class="pill">gist-id</span></label><input type="text" id="p-gist-id" placeholder="留空则不启用"></div>
+<div class="gist-row show" id="p-gist-row"><label>Gist ID <span class="pill">gist-id</span></label><input type="text" id="p-gist-id" placeholder="留空则不启用"></div>
 <div class="gist-row show" id="p-gist-row2"><label>GitHub Token <span class="pill">gh-token</span></label><input type="text" id="p-gist-token" placeholder="留空则不启用"></div>
 
 <p class="tip" id="p-gist-preview" style="display:none;color:var(--acc)"></p>
@@ -657,8 +657,6 @@ parts.push(kv('gist-sub-file', 'sub_' + name + '.txt'));
 var preview = $('p-gist-preview');
 preview.textContent = '将自动生成：sshx_' + name + '.txt | sub_' + name + '.txt';
 preview.style.display = '';
-$('p-gist-row').classList.add('show');
-$('p-gist-row2').classList.add('show');
 } else {
 $('p-gist-preview').style.display = 'none';
 }

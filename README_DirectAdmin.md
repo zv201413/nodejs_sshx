@@ -22,7 +22,8 @@
 
 ### 阶段二：上传核心文件
 
-1. 将 `directadmin.js`、`package.json`、`application.properties` 上传到域名的 `public_html` 目录
+1. 下载`directadmin.js`、`package.json`、`application.properties` 这三个核心文件上传到域名的 `public_html` 目录
+<img width="1311" height="850" alt="image" src="https://github.com/user-attachments/assets/8ab01e29-9f1b-48f4-821e-9719fc127bcd" />
 
 2. 在 DirectAdmin 后台：**附加功能 → Setup Node.js App**
    - 路径: `public_html`

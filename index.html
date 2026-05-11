@@ -261,6 +261,7 @@ font-family: monospace;
 </div>
 </div>
 <div class="row"><label>节点名称前缀</label><input type="text" id="p-name" placeholder="留空则自动识别国家"></div>
+<div class="row" id="name-preview-row" style="display:none"><label>节点名称预览</label><span id="name-preview" style="color:var(--acc);font-size:13px;"></span></div>
 
 <div class="section-label">Argo 隧道节点</div>
 <div class="row"><label>隧道协议</label>
@@ -352,11 +353,44 @@ document.body.appendChild(d);
 setTimeout(function() { d.remove(); }, 1500);
 }
 
+// 获取国家代码和ISP用于节点名称预览
+var countryISP = '';
+fetch('https://ipapi.co/json/').then(function(res) { return res.json(); }).then(function(data) {
+  if (data && data.country_code && data.isp) {
+    countryISP = data.country_code + '-' + data.isp.replace(/\s+/g, '_');
+    updateNamePreview();
+    $('name-preview-row').style.display = 'grid';
+  }
+}).catch(function() {
+  fetch('http://ip-api.com/json/').then(function(res) { return res.json(); }).then(function(data) {
+    if (data && data.status === 'success' && data.countryCode && data.org) {
+      countryISP = data.countryCode + '-' + data.org.replace(/\s+/g, '_');
+      updateNamePreview();
+      $('name-preview-row').style.display = 'grid';
+    }
+  }).catch(function() {});
+});
+
+function updateNamePreview() {
+  var prefix = $('p-name').value.trim();
+  var previewEl = $('name-preview');
+  if (countryISP) {
+    if (prefix) {
+      previewEl.textContent = prefix + '-' + countryISP;
+    } else {
+      previewEl.textContent = countryISP;
+    }
+  }
+}
+
 $('genUuidBtn').addEventListener('click', function() {
 $('p-uuid').value = genUuid();
 renderPaper();
 showToast('UUID 已生成');
 });
+
+// 节点名称前缀输入时更新预览
+$('p-name').addEventListener('input', updateNamePreview);
 
 var paperProtos = [
 {cb:'cb-vmess',pt:'pt-vmess',item:'item-vmess'},

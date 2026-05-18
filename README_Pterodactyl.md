@@ -99,6 +99,10 @@ A: 检查 `gist-id` 和 `gh-token` 是否正确
 A: 1) 检查服务器是否支持 IPv6（`ip a` 或 `curl -6 ifconfig.co`）；2) 尝试在 HTML 面板填入 `warp-data` 手动覆盖；3) 查看 `.npm/config.json` 中 `peers.address` 是否与服务器的网络栈匹配
 
 ---
+## 进阶玩法
+### Komari/哪吒监控
+如需使用哪吒/Komari探针，请至少选择配置面板任意一种web ssh，然后进入部署（Komari请将原始命令粘贴到 [Argosbx 转换面板](https://zv201413.github.io/argosbx-new/)，一键生成免 systemd 的 `nohup` 容器专用命令后再执行）
+<img width="1609" height="538" alt="image" src="https://github.com/user-attachments/assets/fc6d314a-961a-4c93-a6a3-2d906989c555" />
 
 ## 鸣谢
 

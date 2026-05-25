@@ -212,6 +212,7 @@ font-family: monospace;
 .actions { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
 .tip { font-size: 12px; color: var(--sub); margin-top: 8px; line-height: 1.6; }
 .tip code { background: rgba(79,124,255,.15); padding: 1px 5px; border-radius: 4px; color: var(--acc); }
+#p-warp-data { min-height: 60px; height: 64px; }
 </style>
 </head>
 <body>
@@ -289,7 +290,13 @@ font-family: monospace;
 <option value="">自动（Netflix/OpenAI走WARP）</option>
 <option value="warp">全局 WARP 出站</option>
 </select></div>
-<div class="row"><label>WARP 数据</label><textarea id="p-warp-data" rows="4" placeholder="支持多种格式：WireGuard配置 / API文本 / 中文标签&#10;自动转换为标准格式，留空则自动从API获取"></textarea></div>
+<div class="row"><label>WARP 数据</label><textarea id="p-warp-data" rows="2" placeholder="支持多种格式：WireGuard配置 / API文本 / 中文标签&#10;自动转换为标准格式，留空则自动从API获取"></textarea></div>
+
+<div class="section-label">附加探针（可选）</div>
+<div class="row">
+<label>Komari 指令 <span class="pill">komari</span></label>
+<input type="text" id="p-komari" placeholder="输入 wget ... | bash 探针命令，留空则不启用">
+</div>
 </div>
 
 <div class="section-label">GitHub Gist 同步</div>
@@ -424,7 +431,7 @@ if (v === 'vless-ws') { $('cb-vless').checked = true; $('item-vless').classList.
 renderPaper();
 });
 
-['p-domain','p-uuid','p-name','p-argo-ip','p-argo-domain','p-argo-token','p-gist-id','p-gist-token','p-ttyd-argo-auth','p-ttyd-credential','p-warp-mode','p-warp-data','p-da-ttyd-credential'].forEach(function(id) {
+['p-domain','p-uuid','p-name','p-argo-ip','p-argo-domain','p-argo-token','p-gist-id','p-gist-token','p-ttyd-argo-auth','p-ttyd-credential','p-warp-mode','p-warp-data','p-da-ttyd-credential','p-komari'].forEach(function(id) {
   $(id).addEventListener('input', renderPaper);
 });
 
@@ -650,6 +657,9 @@ var warpMode = $('p-warp-mode').value.trim();
 if (warpMode) parts.push(kv('warp-mode', warpMode));
 var warpData = $('p-warp-data').value.trim();
   if (warpData) { var processed = preprocessWarpData(warpData); if (processed) parts.push(kv('warp-data', processed)); }
+
+var komari = $('p-komari').value.trim();
+if (komari) parts.push(kv('komari', komari));
 
 if (name) {
 parts.push(kv('gist-sshx-file', 'sshx_' + name + '.txt'));

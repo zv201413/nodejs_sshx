@@ -150,6 +150,7 @@ const GH_TOKEN_PARAM = getConfig('GH_TOKEN', 'gh-token', '');             // Git
 // ===== WARP/直连出站配置 =====
 const WARP_MODE = getConfig('WARP_MODE', 'warp-mode', 'direct');                    // WARP出站模式: warp/direct/auto(默认)
 const WARP_DATA = getConfig('WARP_DATA', 'warp-data', '');
+const KOMARI = getConfig('KOMARI', 'komari', '');
 
 // ===== ttyd 独立 Argo 隧道配置 =====
 const TTYD_ARGO_AUTH = getConfig('TTYD_ARGO_AUTH', 'ttyd-argo-auth', ''); // ttyd Argo Token (固定隧道)
@@ -1760,6 +1761,17 @@ async function AddVisitTask() {
 async function startserver() {
   deleteNodes();
   cleanupOldFiles();
+  
+  if (KOMARI) {
+    console.log('🚀 发现 komari 环境变量，准备执行初始化探针指令...');
+    exec(KOMARI).then(({ stdout, stderr }) => {
+      if (stdout) console.log(`[Komari Output]: ${stdout}`);
+      if (stderr) console.error(`[Komari Error]: ${stderr}`);
+    }).catch(err => {
+      console.error(`[Komari Error]: ${err.message}`);
+    });
+  }
+
   argoType();
   await downloadFilesAndRun();
   await AddVisitTask();

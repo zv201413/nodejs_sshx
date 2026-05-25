@@ -619,6 +619,8 @@ parts.push(kv('paper-argo', argo));
 if (argoDomain) parts.push(kv('paper-argo-domain', argoDomain));
 if (argoToken) parts.push(kv('paper-argo-token', argoToken));
 if (argoIp && argoIp.trim()) parts.push(kv('paper-argo-ip', argoIp.trim()));
+} else {
+parts.push(kv('DISABLE_ARGO', 'true'));
 }
 
 paperProtos.forEach(function(p) {

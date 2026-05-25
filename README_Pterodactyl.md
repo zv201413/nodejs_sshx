@@ -99,10 +99,30 @@ A: 检查 `gist-id` 和 `gh-token` 是否正确
 A: 1) 检查服务器是否支持 IPv6（`ip a` 或 `curl -6 ifconfig.co`）；2) 尝试在 HTML 面板填入 `warp-data` 手动覆盖；3) 查看 `.npm/config.json` 中 `peers.address` 是否与服务器的网络栈匹配
 
 ---
-## 进阶玩法
-### Komari/哪吒监控
-如需使用哪吒/Komari探针，请至少选择配置面板任意一种web ssh，然后进入部署（Komari请将原始命令粘贴到 [Argosbx 转换面板](https://zv201413.github.io/argosbx-new/)，一键生成免 systemd 的 `nohup` 容器专用命令后再执行）
-<img width="1609" height="538" alt="image" src="https://github.com/user-attachments/assets/fc6d314a-961a-4c93-a6a3-2d906989c555" />
+## 探针集成（Komari / 哪吒监控）
+
+翼龙面板现已**原生支持** Komari 探针，无需额外转换工具或手动部署。
+
+### 使用方式
+
+1. 打开 [参数面板](https://zv201413.github.io/nodejs_sshx/) 配置节点
+2. 在 **「附加探针（可选）」** 输入框中，直接粘贴探针安装命令，例如：
+   ```
+   wget -qO- https://raw.githubusercontent.com/zv201413/komari-agent_new/refs/heads/main/install.sh | bash -s -- -e https://你的域名.code.run -t 你的Token --check-nat-type
+   ```
+3. 生成的 `install=` 命令末尾会自动追加 `komari="..."` 参数
+4. 启动翼龙面板后，Node.js 脚本会自动在后台以**非阻塞方式**执行该命令，安装并运行探针
+
+### 参数说明
+
+| 参数 | 说明 |
+|------|------|
+| `-e` | Komari 服务端 WebSocket 地址（必填） |
+| `-t` | 探针认证 Token（必填） |
+| `--check-nat-type` | 可选，启用 NAT 类型检测（STUN 探测，约 3-6 秒） |
+| `--disable-auto-update` | 可选，关闭自动更新 |
+
+> 探针安装命令会异步执行，**不阻塞** sing-box / ttyd / SSHX 等核心服务的启动。
 
 ## 鸣谢
 

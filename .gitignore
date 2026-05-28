@@ -7,12 +7,18 @@ archive_gen.py
 deploy.sh
 Project_Summary.md
 Archive_Log.md
+nodejs-sshx_Project_Summary.md
+nodejs-sshx_Archive_Log.md
+nodejs-sshx_Project_Supplements.md
 
 # 2. 知识库目录
 _Archive/
 _Notebook/
 
-# 3. 系统垃圾与临时文件
+# 3. 子项目（单独部署，不入主仓库）
+or/
+
+# 4. 系统垃圾与临时文件
 node_modules/
 .env
 *.log

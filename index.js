@@ -11,6 +11,29 @@ const { promisify } = require('util');
 const exec = promisify(require('child_process').exec);
 const { execSync } = require('child_process');
 
+// /proc-based process management (fallback when pgrep/pkill unavailable)
+function findPids(name) {
+  try {
+    const out = execSync(`pgrep -f "${name}" 2>/dev/null`, {encoding:'utf8'}).trim();
+    if (out) return out.split('\n').map(Number);
+  } catch(e) {}
+  try {
+    return fs.readdirSync('/proc')
+      .filter(d => /^\d+$/.test(d))
+      .filter(pid => {
+        try { return fs.readFileSync(`/proc/${pid}/cmdline`, 'utf-8').replace(/\0/g, ' ').includes(name); }
+        catch(e) { return false; }
+      })
+      .map(Number);
+  } catch(e) { return []; }
+}
+function killProcesses(name) {
+  try { execSync(`pkill -f "${name}" 2>/dev/null`); return; } catch(e) {}
+  findPids(name).forEach(pid => {
+    try { process.kill(pid, 'SIGTERM'); } catch(e) {}
+  });
+}
+
 // 定义配置文件路径
 const appConfigFile = path.join(__dirname, 'application.properties');
 
@@ -318,7 +341,7 @@ function isValidDomainName(d) {
 //清理历史文件
 const pathsToDelete = [ webRandomName, botRandomName, npmRandomName, 'boot.log', 'list.txt', 's.txt'];
 function cleanupOldFiles() {
-  try { execSync(`pkill -f "${FILE_PATH}" > /dev/null 2>&1`); } catch(e) {}
+  killProcesses(FILE_PATH);
   pathsToDelete.forEach(file => {
     const filePath = path.join(FILE_PATH, file);
     fs.unlink(filePath, () => {});
@@ -1240,14 +1263,10 @@ if (enableTTYD) {
         console.log(`组件A已启动, 端口: ${TTYD_PORT}`);
         await new Promise(resolve => setTimeout(resolve, 3000));
 
-        try {
-            const checkResult = execSync(`pgrep -f "${ttydPath}"`).toString().trim();
-            if (checkResult) {
-                console.log('组件A进程确认运行中, PID:', checkResult);
-            } else {
-                console.error('组件A启动后未检测到进程');
-            }
-        } catch(e) {
+        const ttydPids = findPids(ttydPath);
+        if (ttydPids.length > 0) {
+            console.log('组件A进程确认运行中, PID:', ttydPids.join(','));
+        } else {
             console.error('组件A启动后未检测到进程');
         }
 
@@ -1478,15 +1497,7 @@ async function extractDomains() {
         console.log('ArgoDomain not found, re-running bot to obtain ArgoDomain');
         // 删除 boot.log 文件，等待 2s 重新运行 server 以获取 ArgoDomain
         fs.unlinkSync(path.join(FILE_PATH, 'boot.log'));
-        async function killBotProcess() {
-          try {
-            await exec(`pkill -f "${botRandomName}" > /dev/null 2>&1`);
-          } catch (error) {
-            return null;
-            // 忽略输出
-          }
-        }
-        killBotProcess();
+        killProcesses(botRandomName);
         await new Promise((resolve) => setTimeout(resolve, 1000));
         const args = `tunnel --edge-ip-version auto --no-autoupdate --protocol http2 --logfile ${FILE_PATH}/boot.log --loglevel info --url http://localhost:${actualArgoPort}`;
         try {

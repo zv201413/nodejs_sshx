@@ -1,0 +1,17 @@
+{
+  "name": "directadmin-vless-ws-tls",
+  "version": "1.0.0",
+  "description": "DirectAdmin Node.js VLESS WS TLS node",
+  "main": "index.js",
+  "author": "easyshare",
+  "license": "MIT",
+  "dependencies": {
+    "ws": "^8.17.0"
+  },
+  "engines": {
+    "node": ">=16"
+  },
+  "scripts": {
+    "start": "node index.js"
+  }
+}

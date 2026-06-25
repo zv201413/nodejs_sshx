@@ -17,6 +17,7 @@ _Notebook/
 
 # 3. 子项目（单独部署，不入主仓库）
 or/
+codered/
 
 # 4. 系统垃圾与临时文件
 node_modules/

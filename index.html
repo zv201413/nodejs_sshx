@@ -629,11 +629,11 @@ if (!cb.checked) return;
 var key = p.cb.replace('cb-', '');
 var pt = $(p.pt);
 var port = pt ? pt.value.trim() : '';
-var paperKey = key === 's5' ? 'paper-s5-port'
-: key === 'vmess' ? 'paper-vmess-port'
+var paperKey = key === 's5' ? 'S5_PORT'
+: key === 'vmess' ? 'paper-vless-port'
 : key === 'vless' ? 'paper-vless-port'
 : key === 'hypt' ? 'paper-hy2-port'
-: key === 'anpt' ? 'paper-anytls-port'
+: key === 'anpt' ? 'ANYTLS_PORT'
 : key === 'tupt' ? 'paper-tuic-port'
 : key;
 if (key === 'sshx') {

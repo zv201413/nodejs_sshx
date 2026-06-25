@@ -232,7 +232,7 @@ font-family: monospace;
 <h2>选择协议与端口</h2>
 <div class="section-label">TCP 协议</div>
 <div class="proto-grid">
-<div class="proto-item" id="item-vmess"><label><input type="checkbox" id="cb-vmess"> Vmess-WS</label><input type="text" class="port-input" id="pt-vmess" placeholder="25566" value="25566"></div>
+<!-- vmess 已移除，与 vless 共用 paper-vless-port -->
 <div class="proto-item" id="item-vless"><label><input type="checkbox" id="cb-vless"> VLESS-WS</label><input type="text" class="port-input" id="pt-vless" placeholder="25568" value="25568"></div>
 <div class="proto-item" id="item-anpt"><label><input type="checkbox" id="cb-anpt"> AnyTLS</label><input type="text" class="port-input" id="pt-anpt" placeholder="8444" value="8444"></div>
 
@@ -400,7 +400,6 @@ showToast('UUID 已生成');
 $('p-name').addEventListener('input', updateNamePreview);
 
 var paperProtos = [
-{cb:'cb-vmess',pt:'pt-vmess',item:'item-vmess'},
 {cb:'cb-vless',pt:'pt-vless',item:'item-vless'},
 {cb:'cb-anpt', pt:'pt-anpt', item:'item-anpt' },
 {cb:'cb-s5',pt:'pt-s5',item:'item-s5'},
@@ -426,7 +425,6 @@ $('p-argo').addEventListener('change', function() {
 var v = this.value;
 $('p-argo-domain-row').style.display = v ? '' : 'none';
 $('p-argo-token-row').style.display = v ? '' : 'none';
-if (v === 'vmess-ws') { $('cb-vmess').checked = true; $('item-vmess').classList.add('active'); }
 if (v === 'vless-ws') { $('cb-vless').checked = true; $('item-vless').classList.add('active'); }
 renderPaper();
 });
@@ -442,20 +440,9 @@ $('p-directadmin-mode').addEventListener('change', function() {
   $('da-ttyd-row').style.display = isDA ? 'grid' : 'none';
   // DirectAdmin 模式隐藏 WARP 选项
   $('warp-section').style.display = isDA ? 'none' : '';
-  // DirectAdmin 模式隐藏 Vmess 隧道选项
-  var vmessOption = $('opt-vmess-ws');
-  if (vmessOption) vmessOption.style.display = isDA ? 'none' : '';
-  // 如果当前选的是 vmess-ws，切换到 vless-ws
-  if (isDA && $('p-argo').value === 'vmess-ws') {
-    $('p-argo').value = 'vless-ws';
-  }
   // DirectAdmin 模式：只禁用协议选择，输入框保持可用（需要填写域名）
   // DirectAdmin 只支持 VLESS-WS，其他协议禁用
-  if (isDA && $('cb-vmess')) {
-    $('cb-vmess').checked = false;
-    $('cb-vmess').disabled = true;
-  }
-  var disabledProtocols = ['item-vmess','item-anpt','item-s5','item-hypt','item-tupt'];
+  var disabledProtocols = ['item-anpt','item-s5','item-hypt','item-tupt'];
   disabledProtocols.forEach(function(id) {
     var el = $(id);
     if (el) { 

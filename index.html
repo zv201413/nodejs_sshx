@@ -268,7 +268,6 @@ font-family: monospace;
 <div class="row"><label>隧道协议</label>
 <select id="p-argo">
 <option value="">关闭（直连模式）</option>
-<option value="vmess-ws" id="opt-vmess-ws">Vmess-WS + 隧道</option>
 <option value="vless-ws">VLESS-WS + 隧道</option>
 </select>
 </div>
@@ -617,7 +616,6 @@ var key = p.cb.replace('cb-', '');
 var pt = $(p.pt);
 var port = pt ? pt.value.trim() : '';
 var paperKey = key === 's5' ? 'S5_PORT'
-: key === 'vmess' ? 'paper-vless-port'
 : key === 'vless' ? 'paper-vless-port'
 : key === 'hypt' ? 'paper-hy2-port'
 : key === 'anpt' ? 'ANYTLS_PORT'

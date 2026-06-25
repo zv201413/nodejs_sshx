@@ -1,0 +1,13 @@
+{
+  "name": "codered-ttyd",
+  "version": "1.0.0",
+  "description": "CodeRed Cloud web terminal via ttyd + Cloudflare Argo",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "axios": "latest",
+    "express": "latest"
+  }
+}

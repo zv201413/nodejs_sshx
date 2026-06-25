@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>CodeRed Web Terminal</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font: 15px/1.5 system-ui, -apple-system, sans-serif;
+  background: #0b1020;
+  color: #e9edf7;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.card {
+  background: #121831;
+  border: 1px solid #263255;
+  border-radius: 16px;
+  padding: 32px;
+  max-width: 520px;
+  width: 90%;
+}
+h1 { font-size: 22px; margin-bottom: 6px; }
+.sub { color: #b7c1d9; font-size: 13px; margin-bottom: 20px; }
+.status { padding: 12px; border-radius: 10px; margin-bottom: 12px; font-size: 13px; }
+.status.ok { background: rgba(34,197,94,.12); border: 1px solid rgba(34,197,94,.3); color: #22c55e; }
+.status.warn { background: rgba(245,158,11,.12); border: 1px solid rgba(245,158,11,.3); color: #f59e0b; }
+.status.off { background: rgba(239,68,68,.12); border: 1px solid rgba(239,68,68,.3); color: #ef4444; }
+.info { margin: 16px 0; }
+.info dt { font-size: 12px; color: #b7c1d9; margin-top: 10px; }
+.info dd { font-size: 14px; word-break: break-all; }
+a { color: #4f7cff; text-decoration: none; }
+a:hover { text-decoration: underline; }
+.btn {
+  display: inline-block;
+  margin-top: 16px;
+  padding: 10px 20px;
+  background: #4f7cff;
+  color: #fff;
+  border: none;
+  border-radius: 10px;
+  font-size: 14px;
+  cursor: pointer;
+}
+.btn:hover { opacity: .85; }
+.footer { margin-top: 20px; font-size: 12px; color: #5a6578; }
+</style>
+</head>
+<body>
+<div class="card">
+  <h1>CodeRed 网页终端</h1>
+  <p class="sub">基于 ttyd + Cloudflare Argo 隧道</p>
+
+  <div id="status-app">
+    <div class="status" v-bind:class="statusClass">{{ statusText }}</div>
+
+    <div class="info">
+      <dl>
+        <dt>Express 服务器</dt>
+        <dd>{{ expressPort || '加载中...' }}</dd>
+
+        <dt v-if="ttydStatus">ttyd 终端</dt>
+        <dd v-if="ttydStatus">{{ ttydStatus }}</dd>
+
+        <dt v-if="argoUrl">Argo 隧道地址</dt>
+        <dd v-if="argoUrl"><a :href="argoUrl" target="_blank">{{ argoUrl }}</a></dd>
+
+        <dt v-if="hysteriaStatus">Hysteria2 Realm</dt>
+        <dd v-if="hysteriaStatus">{{ hysteriaStatus }}</dd>
+
+      </dl>
+    </div>
+
+    <a :href="argoUrl" target="_blank" class="btn" v-if="argoUrl">打开网页终端</a>
+
+    <p class="footer" v-if="!argoUrl">终端启动中，请等待 10-15 秒后刷新页面...</p>
+  </div>
+</div>
+
+<script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+<script>
+const { createApp } = Vue;
+createApp({
+  data() {
+    return {
+      expressPort: '3000',
+      ttydStatus: '',
+      argoUrl: '',
+      hysteriaStatus: '',
+
+      statusText: '正在连接服务器...',
+      statusClass: 'warn'
+    }
+  },
+  mounted() {
+    fetch('/api/status')
+      .then(r => r.json())
+      .then(d => {
+        this.expressPort = '3000 (运行中)';
+        if (d.ttydRunning) {
+          this.ttydStatus = '运行中 (端口 ' + d.ttydPort + ')';
+        } else {
+          this.ttydStatus = '未启动';
+        }
+        if (d.argoUrl) {
+          this.argoUrl = d.argoUrl;
+        }
+        if (d.hysteriaEnabled) {
+          let parts = [];
+          if (d.hysteriaRunning) parts.push('运行中');
+          if (d.hysteriaRealmStatus) parts.push(d.hysteriaRealmStatus);
+          if (d.hysteriaPublicAddr) parts.push(d.hysteriaPublicAddr);
+          this.hysteriaStatus = parts.join(' | ') || '连接中...';
+        }
+        if (this.argoUrl) {
+          this.statusText = '一切正常，隧道已建立';
+          this.statusClass = 'ok';
+        } else if (d.ttydRunning) {
+          this.statusText = 'ttyd 运行中，Argo 隧道建立中...';
+          this.statusClass = 'warn';
+        } else {
+          this.statusText = 'ttyd 未启动，检查配置';
+          this.statusClass = 'off';
+        }
+      })
+      .catch(() => {
+        this.statusText = '无法连接服务器';
+        this.statusClass = 'off';
+      });
+  }
+}).mount('#status-app');
+</script>
+</body>
+</html>

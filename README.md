@@ -42,4 +42,23 @@
 
 页面上方集中放置协议与连接设置，下方「配置与部署」通过 **Gist 同步 / 附加探针 / 运行设置**页签切换配置，右侧实时生成命令；WARP 与终端凭证位于「运行设置」。
 
-部署更新时，翼龙模式需同时上传 `index.js`、`log-limit.js`、`runtime-files.js`、`package.json` 和 `application.properties`；DirectAdmin 模式需上传 `directadmin.js`、`log-limit.js`、`package.json` 和 `application.properties`。
+部署更新时，翼龙模式需同时上传 `index.js`、`log-limit.js`、`runtime-files.js`、`tls-cert.js`、`tls-links.js`、`package.json` 和 `application.properties`；DirectAdmin 模式需上传 `directadmin.js`、`log-limit.js`、`package.json` 和 `application.properties`。
+
+## 自签证书校验与 iOS 兼容订阅
+
+Hysteria2、TUIC、AnyTLS 默认生成带 `pinSHA256` 的校验版节点，公钥 SHA256 使用标准 base64 并正确 URL 编码；默认链接关闭跳过验证。首次生成独立的 ECC P-256 自签证书，SAN 包含 `www.bing.com` 和 `bing.com`，后续启动复用证书和私钥。旧证书缺少 SAN 或即将过期时保留私钥重新签发，公钥 pin 保持不变，使用 PEM 或整证书指纹的客户端需更新证书；旧版内置的共用私钥会一次性替换，需要重新导入节点。首次生成或重新签发需要 **OpenSSL ≥1.1.1**，失败时中止核心启动并报告错误。
+
+默认订阅地址（自定义 `SUB_PATH` 时替换 `sub` 前缀）：
+
+| 地址 | 内容 / 用途 |
+|------|-------------|
+| `/sub` | 默认校验版订阅，电脑端使用 |
+| `/sub-ios` | 独立 iOS 兼容版，Hy2 / TUIC / AnyTLS 跳过证书校验 |
+| `/sub-cert.pem` | 下载当前公开 PEM 证书，供客户端手动导入 |
+| `/sub-singbox.json` | Hy2 / TUIC / AnyTLS 的 sing-box 客户端配置，使用公钥 pin，混合代理监听 `127.0.0.1:1080` |
+
+Gist 同时推送校验版与 iOS 版；例如 `sub_节点.txt` 和 `sub_节点-ios.txt`，启用 TLS 时另附 `sub_节点-cert.pem`、`sub_节点-singbox.json`。自动上传订阅器继续使用校验版。
+
+**电脑端适配：** v2rayN fork 补丁版使用 **sing-box ≥1.13** 核心，Hy2 / TUIC 链接中的公钥 pin 会映射到 `certificate_public_key_sha256`；AnyTLS 的 URI pin 支持取决于客户端。官方 v2rayN 或不识别该参数的客户端，需要在节点 TLS 设置中导入 `/sub-cert.pem` 内容，并关闭跳过验证；也可使用 `/sub-singbox.json` 中的原生配置。Xray / 独立 Hy2 核所需的 hex 整证书指纹与 base64 公钥 pin 不同，不能混用；当前整证书指纹保存在运行目录的 `SHA256.txt`，公钥指纹保存在 `PUBKEY_SHA256_B64.txt`。
+
+PEM 与指纹不包含私钥。证书下载应使用可信的 HTTPS 地址或从面板文件管理器读取；不要删除 `cert.pem`、`private.key`，更换私钥后需要重新导入节点。Argo 的公网 TLS 节点使用域名证书正常校验，Reality 配置沿用原有公钥认证。

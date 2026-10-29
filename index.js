@@ -9,9 +9,12 @@ const path = require("path");
 require('dotenv').config();
 const { promisify } = require('util');
 const exec = promisify(require('child_process').exec);
+const execFile = promisify(require('child_process').execFile);
 const { execSync } = require('child_process');
 const { createLogGuard, mirrorConsole } = require('./log-limit');
 const { createRuntimeFiles, createKomariEnv } = require('./runtime-files');
+const { ensureTlsCertificate } = require('./tls-cert');
+const { buildTlsNode, makeIosSubscription, buildSingboxConfig, subscriptionFiles, registerSubscriptionRoutes } = require('./tls-links');
 
 // /proc-based process management (fallback when pgrep/pkill unavailable)
 function findPids(name) {
@@ -258,6 +261,9 @@ console.log(`📜 单个运行日志上限: ${logGuard.maxMB} MB`);
 let privateKey = '';
 let publicKey = '';
 let sshxUrl = '';
+let tlsCertificate = null;
+let subscriptionSnapshot = null;
+registerSubscriptionRoutes(app, SUB_PATH, () => subscriptionSnapshot);
 
 // 生成随机6位字符函数
 function generateRandomName() {
@@ -551,14 +557,14 @@ uuid: ${UUID}`;
 console.log('Private Key: [redacted]');
     console.log('Public Key:', publicKey);
 
-    continueExecution();
   } else {
-    // 修改执行命令以使用随机文件名
-    exec(`${path.join(FILE_PATH, webRandomName)} generate reality-keypair`, async (err, stdout, stderr) => {
-      if (err) {
-        console.error(`Error generating reality-keypair: ${err.message}`);
-        return;
-      }
+    let stdout;
+    try {
+      ({ stdout } = await execFile(path.join(FILE_PATH, webRandomName), ['generate', 'reality-keypair']));
+    } catch (err) {
+      console.error(`Error generating reality-keypair: ${err.message}`);
+      return;
+    }
     
       const privateKeyMatch = stdout.match(/PrivateKey:\s*(.*)/);
       const publicKeyMatch = stdout.match(/PublicKey:\s*(.*)/);
@@ -577,66 +583,10 @@ console.log('Private Key: [redacted]');
 console.log('Private Key: [redacted]');
       console.log('Public Key:', publicKey);
 
-      continueExecution();
-    });
   }
+  await continueExecution();
 
-  function continueExecution() {
-
-    exec('which openssl || where.exe openssl', async (err, stdout, stderr) => {
-        if (err || stdout.trim() === '') {
-          // OpenSSL 不存在，创建预定义的证书和私钥文件
-          // console.log('OpenSSL not found, creating predefined certificate and key files');
-          
-          // 创建 private.key 文件
-          const privateKeyContent = `-----BEGIN EC PARAMETERS-----
-BggqhkjOPQMBBw==
------END EC PARAMETERS-----
------BEGIN EC PRIVATE KEY-----
-MHcCAQEEIM4792SEtPqIt1ywqTd/0bYidBqpYV/++siNnfBYsdUYoAoGCCqGSM49
-AwEHoUQDQgAE1kHafPj07rJG+HboH2ekAI4r+e6TL38GWASANnngZreoQDF16ARa
-/TsyLyFoPkhLxSbehH/NBEjHtSZGaDhMqQ==
------END EC PRIVATE KEY-----`;
-          
-          fs.writeFileSync(path.join(FILE_PATH, 'private.key'), privateKeyContent);
-          // console.log('private.key has been created');
-          
-          // 创建 cert.pem 文件
-          const certContent = `-----BEGIN CERTIFICATE-----
-MIIBejCCASGgAwIBAgIUfWeQL3556PNJLp/veCFxGNj9crkwCgYIKoZIzj0EAwIw
-EzERMA8GA1UEAwwIYmluZy5jb20wHhcNMjUwOTE4MTgyMDIyWhcNMzUwOTE2MTgy
-MDIyWjATMREwDwYDVQQDDAhiaW5nLmNvbTBZMBMGByqGSM49AgEGCCqGSM49AwEH
-A0IABNZB2nz49O6yRvh26B9npACOK/nuky9/BlgEgDZ54Ga3qEAxdegEWv07Mi8h
-aD5IS8Um3oR/zQRIx7UmRmg4TKmjUzBRMB0GA1UdDgQWBBTV1cFID7UISE7PLTBR
-BfGbgkrMNzAfBgNVHSMEGDAWgBTV1cFID7UISE7PLTBRBfGbgkrMNzAPBgNVHRMB
-Af8EBTADAQH/MAoGCCqGSM49BAMCA0cAMEQCIAIDAJvg0vd/ytrQVvEcSm6XTlB+
-eQ6OFb9LbLYL9f+sAiAffoMbi4y/0YUSlTtz7as9S8/lciBF5VCUoVIKS+vX2g==
------END CERTIFICATE-----`;
-          
-      fs.writeFileSync(path.join(FILE_PATH, 'cert.pem'), certContent);
-      // console.log('cert.pem has been created');
-    } else {
-      // OpenSSL 存在，直接生成证书
-      // console.log('OpenSSL found, generating certificate and key files');
-      
-      // 生成 private.key 文件
-      try {
-        await execPromise(`openssl ecparam -genkey -name prime256v1 -out "${path.join(FILE_PATH, 'private.key')}"`);
-        // console.log('private.key has been generated successfully');
-      } catch (err) {
-        console.error(`Error generating private.key: ${err.message}`);
-        return;
-      }
-      
-      // 生成 cert.pem 文件
-      try {
-        await execPromise(`openssl req -new -x509 -days 3650 -key "${path.join(FILE_PATH, 'private.key')}" -out "${path.join(FILE_PATH, 'cert.pem')}" -subj "/CN=bing.com"`);
-        // console.log('cert.pem has been generated successfully');
-      } catch (err) {
-        console.error(`Error generating cert.pem: ${err.message}`);
-        return;
-      }
-    }
+  async function continueExecution() {
 
     // 确保 privateKey 和 publicKey 已经被正确赋值
     if (!privateKey || !publicKey) {
@@ -1354,8 +1304,7 @@ if (enableTTYD) {
 // 无论是否禁用 Argo，都需要生成节点信息
     await new Promise((resolve) => setTimeout(resolve, 5000));
     await extractDomains();
-    });
-  };
+  }
 }
 
 // 执行命令的Promise封装
@@ -1379,13 +1328,10 @@ async function syncToGist(url, content) {
 
   const gistUrl = `https://api.github.com/gists/${GIST_ID}`;
 
+  const files = typeof url === 'string' ? { [url]: content } : url;
   const body = {
     description: "SSH 链接同步",
-    files: {
-      [url]: {
-        content: content
-      }
-    }
+    files: Object.fromEntries(Object.entries(files).map(([name, value]) => [name, { content: value }]))
   };
 
   try {
@@ -1603,9 +1549,9 @@ console.log(' 实际TUIC端口:', actualTUICPort);
   // 自定义域名/IP配置
   const actualDomain = PAPER_DOMAIN || SERVER_IP;
 
-  return new Promise((resolve) => {
-    setTimeout(() => {
+  await new Promise(resolve => setTimeout(resolve, 2000));
       let subTxt = '';
+      const tlsOutbounds = [];
 
       // 只有当 DISABLE_ARGO 不为 'true' 且 argoDomain 存在时才生成默认的 vmess 节点
       if ((DISABLE_ARGO !== 'true' && DISABLE_ARGO !== true) && argoDomain) {
@@ -1618,11 +1564,10 @@ console.log(' 实际TUIC端口:', actualTUICPort);
         if (argoProtocol === 'vless-ws') {
         // vless-ws 格式 (参考 PaperMC_WorldMagic)
         // path 需要URL编码，argo模式下使用 /vless-argo
-        // 必须包含 insecure=1&allowInsecure=1
-        vmessNode = `vless://${UUID}@${argoIP}:${CFPORT}?encryption=none&security=tls&sni=${argoDomainFinal}&fp=chrome&alpn=h2&insecure=1&allowInsecure=1&type=ws&host=${argoDomainFinal}&path=%2Fvless-argo#${nodeName}`;
+        vmessNode = `vless://${UUID}@${argoIP}:${CFPORT}?encryption=none&security=tls&sni=${argoDomainFinal}&fp=chrome&alpn=h2&insecure=0&allowInsecure=0&type=ws&host=${argoDomainFinal}&path=%2Fvless-argo#${encodeURIComponent(nodeName)}`;
         } else {
           // 默认vmess-ws
-          vmessNode = `vmess://${Buffer.from(JSON.stringify({ v: '2', ps: `${nodeName}`, add: argoIP, port: CFPORT, id: UUID, aid: '0', scy: 'auto', net: 'ws', type: 'none', host: argoDomainFinal, path: '/vmess-argo', tls: 'tls', sni: argoDomainFinal, alpn: 'h2', fp: 'chrome', allowInsecure: 1 })).toString('base64')}`;
+          vmessNode = `vmess://${Buffer.from(JSON.stringify({ v: '2', ps: `${nodeName}`, add: argoIP, port: CFPORT, id: UUID, aid: '0', scy: 'auto', net: 'ws', type: 'none', host: argoDomainFinal, path: '/vmess-argo', tls: 'tls', sni: argoDomainFinal, alpn: 'h2', fp: 'chrome', allowInsecure: 0 })).toString('base64')}`;
         }
         subTxt = vmessNode;
         console.log('🔗 Argo节点:', vmessNode.substring(0, 100) + '...');
@@ -1630,16 +1575,18 @@ console.log(' 实际TUIC端口:', actualTUICPort);
 
       // TUIC端口是有效端口号时生成tuic节点
       if (isValidPort(actualTUICPort)) {
-        const tuicNode = `\ntuic://${UUID}:${UUID}@${actualDomain}:${actualTUICPort}?sni=www.bing.com&congestion_control=bbr&udp_relay_mode=native&alpn=h3&allow_insecure=1#${nodeName}`;
-        subTxt += tuicNode;
-        console.log('🔗 TUIC节点:', tuicNode.trim());
+        const node = buildTlsNode('tuic', { uuid: UUID, host: actualDomain, port: actualTUICPort, name: nodeName }, tlsCertificate);
+        subTxt += '\n' + node.uri;
+        tlsOutbounds.push(node.outbound);
+        console.log('🔗 TUIC节点:', node.uri);
       }
 
       // HY2端口是有效端口号时生成hysteria2节点
       if (isValidPort(actualHY2Port)) {
-        const hysteriaNode = `\nhysteria2://${UUID}@${actualDomain}:${actualHY2Port}/?sni=www.bing.com&insecure=1&alpn=h3&obfs=none#${nodeName}`;
-        subTxt += hysteriaNode;
-        console.log('🔗 HY2节点:', hysteriaNode.trim());
+        const node = buildTlsNode('hysteria2', { uuid: UUID, host: actualDomain, port: actualHY2Port, name: nodeName }, tlsCertificate);
+        subTxt += '\n' + node.uri;
+        tlsOutbounds.push(node.outbound);
+        console.log('🔗 HY2节点:', node.uri);
       }
 
       // Reality端口是有效端口号时生成reality节点
@@ -1650,8 +1597,9 @@ console.log(' 实际TUIC端口:', actualTUICPort);
 
       // ANYTLS_PORT是有效端口号时生成anytls节点
       if (isValidPort(ANYTLS_PORT)) {
-        const anytlsNode = `\nanytls://${UUID}@${SERVER_IP}:${ANYTLS_PORT}?security=tls&sni=${SERVER_IP}&fp=chrome&insecure=1&allowInsecure=1#${nodeName}`;
-        subTxt += anytlsNode;
+        const node = buildTlsNode('anytls', { uuid: UUID, host: actualDomain, port: ANYTLS_PORT, name: nodeName }, tlsCertificate);
+        subTxt += '\n' + node.uri;
+        tlsOutbounds.push(node.outbound);
       }
 
       // ANYREALITY_PORT是有效端口号时生成anyreality节点
@@ -1667,28 +1615,27 @@ console.log(' 实际TUIC端口:', actualTUICPort);
         subTxt += s5Node;
       }
 
-      // 打印 sub.txt 内容到控制台
+      subTxt = subTxt.trim();
+      const iosTxt = makeIosSubscription(subTxt);
+      const singbox = buildSingboxConfig(tlsOutbounds);
+      subscriptionSnapshot = { desktop: subTxt, ios: iosTxt, info: tlsCertificate, singbox };
+      // 打印默认校验版 sub.txt 内容到控制台
       console.log('\x1b[32m' + Buffer.from(subTxt).toString('base64') + '\x1b[0m'); // 输出绿色
       console.log('\x1b[35m' + 'Logs will be deleted in 90 seconds,you can copy the above nodes' + '\x1b[0m'); // 洋红色
       fs.writeFileSync(subPath, Buffer.from(subTxt).toString('base64'));
       fs.writeFileSync(listPath, subTxt, 'utf8');
+      fs.writeFileSync(path.join(FILE_PATH, 'sub-ios.txt'), Buffer.from(iosTxt).toString('base64'));
+      fs.writeFileSync(path.join(FILE_PATH, 'list-ios.txt'), iosTxt, 'utf8');
       console.log(`${FILE_PATH}/sub.txt saved successfully`);
+      console.log(`[订阅] 校验版: /${SUB_PATH}；iOS 兼容版（跳过校验）: /${SUB_PATH}-ios`);
+      if (tlsCertificate) console.log(`[TLS] PEM 证书: /${SUB_PATH}-cert.pem；sing-box 配置: /${SUB_PATH}-singbox.json`);
       
       // 同步 sub.txt 到 Gist (使用 GIST_SUB_FILE 参数)
-      const timestamp = new Date(Date.now() + 8 * 3600 * 1000).toLocaleString('zh-CN');
       const subFileName = GIST_SUB_FILE || 'sub.txt';
-      syncToGist(subFileName, `最后更新时间: ${timestamp}\n----------------------------\n${subTxt}`);
+      syncToGist(subscriptionFiles(subFileName, subTxt, iosTxt, tlsCertificate, singbox));
       
       uplodNodes(); // 推送节点到订阅器
-      // 将内容进行 base64 编码并写入 SUB_PATH 路由
-      app.get(`/${SUB_PATH}`, (req, res) => {
-        const encodedContent = Buffer.from(subTxt).toString('base64');
-        res.set('Content-Type', 'text/plain; charset=utf-8');
-        res.send(encodedContent);
-      });
-      resolve(subTxt);
-    }, 2000);
-  });
+      return subTxt;
 }
   
 // 90s分钟后删除临时文件（保留二进制文件以支持崩溃重启）
@@ -1696,7 +1643,7 @@ function cleanFiles() {
   setTimeout(() => {
     console.log('正在清理临时文件...');
 
-    [configPath, listPath, subPath].forEach(file => {
+    [configPath, listPath, subPath, path.join(FILE_PATH, 'list-ios.txt'), path.join(FILE_PATH, 'sub-ios.txt')].forEach(file => {
       if (fs.existsSync(file)) {
         try { fs.unlinkSync(file); } catch (e) {}
       }
@@ -1784,6 +1731,17 @@ async function AddVisitTask() {
 async function startserver() {
   deleteNodes();
   await cleanupOldFiles();
+  if ([isValidPort(PAPER_HY2_PORT) ? PAPER_HY2_PORT : HY2_PORT,
+    isValidPort(PAPER_TUIC_PORT) ? PAPER_TUIC_PORT : TUIC_PORT, ANYTLS_PORT].some(isValidPort)) {
+    try {
+      tlsCertificate = await ensureTlsCertificate(FILE_PATH);
+      console.log(`[TLS] 公钥 pinSHA256: ${tlsCertificate.publicKeyPin}`);
+      if (tlsCertificate.rotatedSharedKey) console.log('[TLS] 已替换旧版共用私钥，请重新导入节点或 PEM 证书');
+    } catch (error) {
+      console.error(`[TLS] 启动中止：${error.message}`);
+      return;
+    }
+  }
   
   if (KOMARI) {
     console.log('🚀 发现 komari 环境变量，准备执行初始化探针指令...');
@@ -1807,7 +1765,7 @@ async function startserver() {
   await AddVisitTask();
   cleanFiles();
 }
-startserver();
+startserver().catch(error => console.error(`核心启动失败：${error.message}`));
 
 // 根路由
 app.get("/", async function(req, res) {

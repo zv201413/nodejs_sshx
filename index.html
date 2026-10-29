@@ -316,6 +316,7 @@ font-family: monospace;
 <div class="proto-item" id="item-hypt"><label><input type="checkbox" id="cb-hypt"> Hysteria2</label><input type="text" class="port-input" id="pt-hypt" placeholder="25565" value="25565"></div>
 <div class="proto-item" id="item-tupt"><label><input type="checkbox" id="cb-tupt"> Tuic</label><input type="text" class="port-input" id="pt-tupt" placeholder="25570" value="25570"></div>
 </div>
+<p class="tip" id="tls-sub-tip">Hysteria2 / TUIC / AnyTLS 默认使用自签证书公钥校验。电脑端导入 <code>/sub</code>；iOS 兼容版单独位于 <code>/sub-ios</code>，跳过证书校验。不识别 pin 的电脑客户端可从 <code>/sub-cert.pem</code> 下载证书导入。</p>
 <div class="section-label">网页终端</div>
 <div class="proto-grid">
 <div class="proto-item" id="item-ttyd"><label><input type="checkbox" id="cb-ttyd"> ttyd</label><span style="font-size:11px;color:var(--sub)">独立Argo隧道</span></div>
@@ -686,6 +687,7 @@ renderPaper();
 // DirectAdmin 模式复选框
 $('p-directadmin-mode').addEventListener('change', function() {
   var isDA = this.checked;
+  $('tls-sub-tip').hidden = isDA;
   $('tab-agent').disabled = isDA;
   if (isDA && $('tab-agent').getAttribute('aria-selected') === 'true') selectConfigTab($('tab-gist'), false);
   // 显示/隐藏 ttyd 凭证输入框
@@ -906,7 +908,7 @@ if (name) {
 parts.push(kv('gist-sshx-file', 'sshx_' + name + '.txt'));
 parts.push(kv('gist-sub-file', 'sub_' + name + '.txt'));
 var preview = $('p-gist-preview');
-preview.textContent = '将自动生成：sshx_' + name + '.txt | sub_' + name + '.txt';
+preview.textContent = '将自动生成：sshx_' + name + '.txt | sub_' + name + '.txt（校验版） | sub_' + name + '-ios.txt（iOS 兼容版），启用 TLS 时附带证书与 sing-box 配置。';
 preview.style.display = '';
 } else {
 $('p-gist-preview').style.display = 'none';

@@ -9,7 +9,7 @@
 
 1. 在游戏机页面找到 IP 和端口后，打开 [参数面板](https://zv201413.github.io/nodejs_sshx/) 复制命令，粘贴到 `application.properties` 文件
 
-2. 将 `index.js`、`log-limit.js`、`runtime-files.js`、`package.json`、`application.properties` 五个文件上传到翼龙面板根目录
+2. 将 `index.js`、`log-limit.js`、`runtime-files.js`、`tls-cert.js`、`tls-links.js`、`package.json`、`application.properties` 七个文件上传到翼龙面板根目录
 
 3. 启动或重启翼龙面板，程序会自动读取配置
 
@@ -17,6 +17,10 @@
 
 ---
 
+
+## 自签证书与订阅
+
+Hysteria2 / TUIC / AnyTLS 默认订阅已启用自签证书公钥校验。电脑端使用 `/sub`，iOS 跳过验证的兼容版单独位于 `/sub-ios`；不识别 pin 的客户端从 `/sub-cert.pem` 下载证书导入。首次生成需要 OpenSSL ≥1.1.1。详见 [自签证书校验与 iOS 兼容订阅](README.md#自签证书校验与-ios-兼容订阅)。
 
 ## 日志大小与文件清理
 

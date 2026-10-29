@@ -157,8 +157,9 @@ margin: 8px 0;
 @media (max-width: 600px) { .row { grid-template-columns: 1fr; gap: 4px; } }
 .row label { font-size: 13px; color: var(--sub); white-space: nowrap; }
 .row label .pill { margin-left: 4px; }
-input[type="text"], input[type="number"], select {
+input[type="text"], input[type="password"], input[type="number"], select {
 width: 100%;
+min-width: 0;
 padding: 9px 12px;
 border: 1px solid var(--line);
 border-radius: 9px;
@@ -170,7 +171,7 @@ outline: none;
 input:focus, select:focus { border-color: var(--acc); }
 input:disabled, select:disabled { opacity: .45; }
 .input-with-btn { display: flex; gap: 6px; align-items: center; }
-.input-with-btn input { flex: 1; }
+.input-with-btn input { flex: 1; min-width: 0; }
 
 .btn {
 cursor: pointer;
@@ -190,8 +191,40 @@ border-color: #476de2;
 color: #fff;
 }
 
-.gist-row { display: none; }
-.gist-row.show { display: grid; }
+.credential-form { margin: 10px 0 16px; }
+.credential-form .actions { margin-top: 12px; }
+.agent-command-control { display: flex; gap: 6px; align-items: center; }
+.agent-command-editor { position: relative; flex: 1; min-width: 0; }
+.agent-command-editor textarea {
+display: block;
+min-height: 56px;
+height: 56px;
+padding: 9px 12px;
+background: var(--input-bg);
+color: var(--ink);
+border: 1px solid var(--line);
+border-radius: 9px;
+font: inherit;
+font-size: 13px;
+white-space: pre-wrap;
+overflow-wrap: anywhere;
+outline: none;
+}
+.agent-command-editor textarea:focus { border-color: var(--acc); }
+.agent-command-mask {
+display: none;
+position: absolute;
+inset: 0;
+align-items: center;
+overflow: hidden;
+padding: 9px 12px;
+color: var(--ink);
+white-space: nowrap;
+pointer-events: none;
+}
+.agent-command-control[data-masked="true"] textarea:not(:placeholder-shown) { color: transparent; caret-color: var(--ink); }
+.agent-command-control[data-masked="true"] textarea:not(:placeholder-shown)::selection { color: transparent; }
+.agent-command-control[data-masked="true"] textarea:not(:placeholder-shown) + .agent-command-mask { display: flex; }
 
 .output-section { grid-column: 1 / -1; }
 .output-section .card { border-color: #3752a6; border-style: dashed; }
@@ -293,15 +326,40 @@ font-family: monospace;
 <div class="row"><label>WARP 数据</label><textarea id="p-warp-data" rows="2" placeholder="支持多种格式：WireGuard配置 / API文本 / 中文标签&#10;自动转换为标准格式，留空则自动从API获取"></textarea></div>
 
 <div class="section-label">附加探针（可选）</div>
+<p class="tip">填写 Komari / 哪吒安装命令，随主脚本一起安装；留空则不启用。</p>
+<form id="agentCredentials" class="credential-form" method="post" autocomplete="off">
 <div class="row">
-<label>Komari 指令 <span class="pill">komari</span></label>
-<input type="text" id="p-komari" placeholder="输入 wget ... | bash 探针命令，留空则不启用">
+<label for="p-agent-note">备注</label>
+<input type="text" id="p-agent-note" name="agent-label" autocomplete="off" autocapitalize="none" spellcheck="false" placeholder="如：Komari 主面板，作为保存账号">
 </div>
+<div class="row">
+<label for="p-komari">安装命令 <span class="pill">komari</span></label>
+<div class="agent-command-control" data-masked="true">
+<div class="agent-command-editor">
+<textarea id="p-komari" name="agent-command" autocomplete="off" rows="2" autocapitalize="none" spellcheck="false" placeholder="粘贴 wget / curl / bash 探针安装命令，留空则不启用"></textarea>
+<span class="agent-command-mask" aria-hidden="true">••••••••••••••••••••••••</span>
+</div>
+<button class="btn btn-sm" id="toggleAgentCommand" type="button" aria-controls="p-komari" aria-pressed="false">显示</button>
+</div>
+</div>
+<div class="actions">
+<button class="btn" type="submit">保存到浏览器</button>
+<button class="btn" id="fillAgentCredentials" type="button">填入已存凭据</button>
+</div>
+</form>
 </div>
 
 <div class="section-label">GitHub Gist 同步</div>
-<div class="gist-row show" id="p-gist-row"><label>Gist ID <span class="pill">gist-id</span></label><input type="text" id="p-gist-id" placeholder="留空则不启用"></div>
-<div class="gist-row show" id="p-gist-row2"><label>GitHub Token <span class="pill">gh-token</span></label><input type="text" id="p-gist-token" placeholder="留空则不启用"></div>
+<form id="gistCredentials" class="credential-form" method="post" autocomplete="on">
+<div class="row" id="p-gist-row"><label for="p-gist-id">Gist ID <span class="pill">gist-id</span></label><input type="text" id="p-gist-id" name="username" autocomplete="username" autocapitalize="none" spellcheck="false" placeholder="留空则不启用"></div>
+<div class="row" id="p-gist-row2"><label for="p-gist-token">GitHub Token <span class="pill">gh-token</span></label><input type="password" id="p-gist-token" name="password" autocomplete="current-password" autocapitalize="none" spellcheck="false" placeholder="留空则不启用"></div>
+<div class="actions">
+<button class="btn" type="submit">保存到浏览器</button>
+<button class="btn" id="fillGistCredentials" type="button">填入已存凭据</button>
+</div>
+</form>
+<p class="tip">点击保存后，在浏览器密码提示中确认；下次可填入已存凭据。请通过 HTTPS 或 localhost 打开页面。</p>
+<p class="tip" id="p-gist-credential-error" role="status" hidden style="color:var(--err)">Gist 栏中填入了探针记录，请选择 Gist 凭据。</p>
 
 <p class="tip" id="p-gist-preview" style="display:none;color:var(--acc)"></p>
 </section>
@@ -334,11 +392,12 @@ font-family: monospace;
 <script>
 (function(){
 var themeBtn = document.getElementById('themeBtn');
-var savedTheme = localStorage.getItem('wmg-theme') || 'dark';
+var savedTheme = 'dark';
+try { savedTheme = localStorage.getItem('wmg-theme') || 'dark'; } catch (e) {}
 if (savedTheme === 'light') document.body.classList.add('light-mode');
 themeBtn.addEventListener('click', function() {
 document.body.classList.toggle('light-mode');
-localStorage.setItem('wmg-theme', document.body.classList.contains('light-mode') ? 'light' : 'dark');
+try { localStorage.setItem('wmg-theme', document.body.classList.contains('light-mode') ? 'light' : 'dark'); } catch (e) {}
 });
 
 function genUuid() { return crypto.randomUUID(); }
@@ -359,6 +418,116 @@ border:'1px solid #334', borderRadius:'10px', zIndex:9999, fontSize:'13px'
 document.body.appendChild(d);
 setTimeout(function() { d.remove(); }, 1500);
 }
+
+var agentCredentialPrefix = '[探针] ';
+
+function canUseBrowserCredentials() {
+  if (!['http:', 'https:'].includes(location.protocol) || !window.isSecureContext) {
+    showToast('请通过 HTTPS 或 localhost 打开页面后使用浏览器密码管理器');
+    return false;
+  }
+  if (!navigator.credentials || !window.PasswordCredential) {
+    showToast('当前浏览器不支持此凭据接口，请使用 Chrome');
+    return false;
+  }
+  return true;
+}
+
+function isAgentCommand(command) {
+  return /(?:^|[|;&\s])(?:wget|curl|bash|sh)(?:\s|$)/i.test(command || '');
+}
+
+function isAgentCredential(credential) {
+  return (credential.id || '').startsWith(agentCredentialPrefix)
+    || isAgentCommand(credential.password)
+    || /^https?:\/\//i.test((credential.password || '').trim());
+}
+
+async function saveBrowserCredential(credential) {
+  try {
+    await navigator.credentials.store(new PasswordCredential(credential));
+    showToast('已请求浏览器保存，请在密码提示中确认');
+  } catch (e) {
+    showToast('浏览器未接受保存请求，请检查密码管理器设置');
+  }
+}
+
+$('agentCredentials').addEventListener('submit', async function(event) {
+  event.preventDefault();
+  var note = $('p-agent-note').value.trim();
+  var command = $('p-komari').value.trim();
+  if (!note || !command) {
+    showToast('请填写备注和完整安装命令后再保存');
+    return;
+  }
+  if (!isAgentCommand(command)) {
+    showToast('请粘贴完整的 wget / curl / bash 探针安装命令');
+    return;
+  }
+  if (!canUseBrowserCredentials()) return;
+  await saveBrowserCredential({ id: agentCredentialPrefix + note, password: command, name: '探针配置：' + note });
+});
+
+$('gistCredentials').addEventListener('submit', async function(event) {
+  event.preventDefault();
+  var id = $('p-gist-id').value.trim();
+  var password = $('p-gist-token').value.trim();
+  if (!id || !password) {
+    showToast('保存时请填写 Gist ID 和 GitHub Token');
+    return;
+  }
+  if (isAgentCredential({ id: id, password: password })) {
+    showToast('这是探针记录，请填写 Gist ID 和 GitHub Token');
+    return;
+  }
+  if (!canUseBrowserCredentials()) return;
+  await saveBrowserCredential({ id: id, password: password });
+});
+
+async function fillBrowserCredential(agent) {
+  if (!canUseBrowserCredentials()) return;
+  try {
+    var credential = await navigator.credentials.get({ password: true, mediation: 'required' });
+    if (!credential) {
+      showToast('未选择凭据，请先保存或从浏览器密码管理器中选择');
+      return;
+    }
+    if (isAgentCredential(credential) !== agent) {
+      showToast(agent ? '所选记录是 Gist 凭据，请选择探针记录' : '所选记录是探针配置，请选择 Gist 凭据');
+      return;
+    }
+    if (agent) {
+      $('p-agent-note').value = credential.id.startsWith(agentCredentialPrefix)
+        ? credential.id.slice(agentCredentialPrefix.length) : credential.id;
+      $('p-komari').value = credential.password;
+      document.querySelector('.agent-command-control').dataset.masked = 'true';
+      $('toggleAgentCommand').textContent = '显示';
+      $('toggleAgentCommand').setAttribute('aria-pressed', 'false');
+    } else {
+      $('p-gist-id').value = credential.id;
+      $('p-gist-token').value = credential.password;
+    }
+    renderPaper();
+    showToast(agent ? '已填入备注和安装命令' : '已填入 Gist ID 和 Token');
+  } catch (e) {
+    showToast('浏览器未能填入凭据，请检查密码管理器设置');
+  }
+}
+
+$('fillAgentCredentials').addEventListener('click', function() { fillBrowserCredential(true); });
+$('fillGistCredentials').addEventListener('click', function() { fillBrowserCredential(false); });
+$('toggleAgentCommand').addEventListener('click', function() {
+  var control = document.querySelector('.agent-command-control');
+  var show = control.dataset.masked === 'true';
+  control.dataset.masked = String(!show);
+  this.textContent = show ? '隐藏' : '显示';
+  this.setAttribute('aria-pressed', String(show));
+});
+['p-komari', 'p-gist-id', 'p-gist-token'].forEach(function(id) {
+  $(id).addEventListener('change', renderPaper);
+});
+$('gistCredentials').addEventListener('focusin', renderPaper);
+window.addEventListener('pageshow', function() { requestAnimationFrame(renderPaper); });
 
 // 获取国家代码和ISP用于节点名称预览
 var countryISP = '';
@@ -548,6 +717,11 @@ function preprocessWarpData(raw) {
 
 function renderPaper() {
 $('p-ttyd-argo-section').style.display = $('cb-ttyd').checked ? '' : 'none';
+var gistId = $('p-gist-id').value.trim();
+var ghToken = $('p-gist-token').value.trim();
+var invalidGistCredential = isAgentCredential({ id: gistId, password: ghToken });
+$('p-gist-credential-error').hidden = !invalidGistCredential;
+if (invalidGistCredential) { gistId = ''; ghToken = ''; }
 
 // DirectAdmin 模式
 var isDAMode = $('p-directadmin-mode') ? $('p-directadmin-mode').checked : false;
@@ -569,10 +743,8 @@ if (isDAMode) {
   var daArgoIp = $('p-argo-ip').value.trim();
   if (daArgoIp) daParts.push(kv('paper-argo-ip', daArgoIp));
   
-  var daGistId = $('p-gist-id').value.trim();
-  var daGhToken = $('p-gist-token').value.trim();
-  if (daGistId) daParts.push(kv('gist-id', daGistId));
-  if (daGhToken) daParts.push(kv('gh-token', daGhToken));
+  if (gistId) daParts.push(kv('gist-id', gistId));
+  if (ghToken) daParts.push(kv('gh-token', ghToken));
   
   // ttyd 配置
   var daTtydCred = $('p-da-ttyd-credential').value.trim();
@@ -631,8 +803,6 @@ parts.push(kv(paperKey, port));
 }
 });
 
-var gistId = $('p-gist-id').value.trim();
-var ghToken = $('p-gist-token').value.trim();
 if (gistId) parts.push(kv('gist-id', gistId));
 if (ghToken) parts.push(kv('gh-token', ghToken));
 

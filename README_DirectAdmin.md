@@ -9,7 +9,7 @@
 ### 阶段一：填写网页面板
 
 1. 打开 [参数面板](https://zv201413.github.io/nodejs_sshx/)
-2. 勾选底部的 **DirectAdmin 模式**（红色高亮）
+2. 勾选「协议与端口」卡片顶部的 **DirectAdmin 模式**（红色高亮）
 3. 填写配置：
    - 服务器域名 (必填)
    - UUID (可选，留空自动生成)
@@ -22,7 +22,7 @@
 
 ### 阶段二：上传核心文件
 
-1. 下载`directadmin.js`、`package.json`、`application.properties` 这三个核心文件上传到域名的 `public_html` 目录
+1. 下载 `directadmin.js`、`log-limit.js`、`package.json`、`application.properties` 这四个文件上传到域名的 `public_html` 目录
 <img width="1311" height="850" alt="image" src="https://github.com/user-attachments/assets/8ab01e29-9f1b-48f4-821e-9719fc127bcd" />
 
 2. 在 DirectAdmin 后台：**附加功能 → Setup Node.js App**
@@ -46,6 +46,9 @@
 | `paper-argo-ip` | 优选 IP/域名 | 见下方说明 |
 | `gist-id` | GitHub Gist ID | `b514d...` |
 | `gh-token` | GitHub Token | `ghp_xxx` |
+| `log-max-mb` | 单个运行日志上限，默认 50MB，范围 1–1024 | `50` |
+
+应用输出保存在 `directadmin.log`，ttyd 输出保存在 `ttyd.log`，达到上限后清理旧内容并继续写入。DirectAdmin 自行收集的控制台日志由面板管理。
 
 ---
 
@@ -64,7 +67,7 @@
 
 ### 启用方法
 
-1. 前端勾选 DirectAdmin 模式后，出现 **ttyd 终端凭证** 输入框
+1. 前端勾选 DirectAdmin 模式后，在「配置与部署 → 运行设置」填写 **ttyd 终端凭证**
 2. 填写格式：`端口:用户名:密码`（如 `7879:admin:123456`）
 3. 生成配置会自动包含 `paper-ttyd=true` 和 `ttyd-credential`
 

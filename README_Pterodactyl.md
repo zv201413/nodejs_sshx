@@ -9,7 +9,7 @@
 
 1. 在游戏机页面找到 IP 和端口后，打开 [参数面板](https://zv201413.github.io/nodejs_sshx/) 复制命令，粘贴到 `application.properties` 文件
 
-2. 将 `index.js`、`package.json`、`application.properties` 三个文件上传到翼龙面板根目录
+2. 将 `index.js`、`log-limit.js`、`runtime-files.js`、`package.json`、`application.properties` 五个文件上传到翼龙面板根目录
 
 3. 启动或重启翼龙面板，程序会自动读取配置
 
@@ -17,6 +17,12 @@
 
 ---
 
+
+## 日志大小与文件清理
+
+在参数面板「连接与节点 → 安装设置」调整单个运行日志的上限，默认 50MB，范围 1–1024MB；命令参数为 `log-max-mb`，环境变量为 `LOG_MAX_MB`。日志达到上限后清理旧内容，继续记录；已有日志每 10 秒检查。面板保存的控制台日志由面板管理。
+
+每次重启先根据 `.runtime-files.json` 清理上一轮下载的随机名称组件及相关日志，保留配置、订阅、UUID 和证书；旧版遗留文件按组件特征识别。WARP、ttyd 凭证位于网页下方「配置与部署 → 运行设置」。
 
 ## WARP 出站说明
 

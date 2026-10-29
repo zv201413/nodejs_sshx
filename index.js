@@ -10,6 +10,8 @@ require('dotenv').config();
 const { promisify } = require('util');
 const exec = promisify(require('child_process').exec);
 const { execSync } = require('child_process');
+const { createLogGuard, mirrorConsole } = require('./log-limit');
+const { createRuntimeFiles } = require('./runtime-files');
 
 // /proc-based process management (fallback when pgrep/pkill unavailable)
 function findPids(name) {
@@ -122,6 +124,7 @@ const PROJECT_URL = getConfig('PROJECT_URL', 'PROJECT_URL', '');    // 需要上
 const AUTO_ACCESS = getConfig('AUTO_ACCESS', 'AUTO_ACCESS', 'false'); // false关闭自动保活，true开启
 const YT_WARPOUT = getConfig('YT_WARPOUT', 'YT_WARPOUT', 'false');   // 设置为true时强制使用warp出站访问youtube
 const FILE_PATH = getConfig('FILE_PATH', 'FILE_PATH', '.npm');    // sub.txt订阅文件路径
+const LOG_MAX_MB = getConfig('LOG_MAX_MB', 'log-max-mb', '50');
 const SUB_PATH = getConfig('SUB_PATH', 'SUB_PATH', 'sub');       // 订阅sub路径
 const UUID = getConfig('UUID', 'UUID', 'c3c87d01-891f-48e3-a91a-6dee38821bbb');  // 在不同的平台运行了v1哪吒请修改UUID,否则会覆盖
 const NEZHA_SERVER = getConfig('NEZHA_SERVER', 'NEZHA_SERVER', '');         // 哪吒面板地址,v1形式：nz.serv00.net:8008  v0形式：nz.serv00.net
@@ -247,6 +250,10 @@ if (!fs.existsSync(FILE_PATH)) {
 } else {
   console.log(`${FILE_PATH} already exists`);
 }
+const logGuard = createLogGuard(FILE_PATH, LOG_MAX_MB);
+const runtimeFiles = createRuntimeFiles(FILE_PATH);
+mirrorConsole(logGuard, 'runtime.log');
+console.log(`📜 单个运行日志上限: ${logGuard.maxMB} MB`);
 
 let privateKey = '';
 let publicKey = '';
@@ -339,13 +346,14 @@ function isValidDomainName(d) {
 }
 
 //清理历史文件
-const pathsToDelete = [ webRandomName, botRandomName, npmRandomName, 'boot.log', 'list.txt', 's.txt'];
-function cleanupOldFiles() {
-  killProcesses(FILE_PATH);
-  pathsToDelete.forEach(file => {
-    const filePath = path.join(FILE_PATH, file);
-    fs.unlink(filePath, () => {});
-  });
+async function cleanupOldFiles() {
+  const removed = await runtimeFiles.cleanup();
+  for (const file of ['boot.log', 'boot.log.out', 'sshx.log', 'list.txt', 's.txt']) {
+    try { fs.unlinkSync(path.join(FILE_PATH, file)); } catch (error) {
+      if (error.code !== 'ENOENT') throw error;
+    }
+  }
+  console.log(`🧹 已清理 ${removed} 个上一轮组件/日志文件`);
 }
 
 // 获取固定隧道json
@@ -392,6 +400,7 @@ function getSystemArchitecture() {
 
 // 下载对应系统架构的依赖文件
 function downloadFile(fileName, fileUrl, callback) {
+  runtimeFiles.register(fileName);
   const filePath = path.join(FILE_PATH, fileName);
   const writer = fs.createWriteStream(filePath);
 
@@ -1167,16 +1176,16 @@ if (DISABLE_ARGO !== 'true' && DISABLE_ARGO !== true) {
       const sbLogPath = path.join(FILE_PATH, 'boot.log');
 
       if (ARGO_AUTH.match(/^[A-Z0-9a-z=]{120,250}$/)) {
-        args = `tunnel --edge-ip-version auto --no-autoupdate --protocol http2 --logfile ${sbLogPath} --loglevel info run --token ${ARGO_AUTH}`;
+        args = `tunnel --edge-ip-version auto --no-autoupdate --protocol http2 --loglevel info run --token ${ARGO_AUTH}`;
         console.log('⚠️ Token模式: 请确保Cloudflare面板已配置Ingress Rules指向 http://localhost:' + actualArgoPort);
       } else if (ARGO_AUTH.match(/TunnelSecret/)) {
         args = `tunnel --edge-ip-version auto --config ${path.join(FILE_PATH, 'tunnel.yml')} run`;
       } else {
-        args = `tunnel --edge-ip-version auto --no-autoupdate --protocol http2 --logfile ${sbLogPath} --loglevel info --url http://localhost:${actualArgoPort}`;
+        args = `tunnel --edge-ip-version auto --no-autoupdate --protocol http2 --loglevel info --url http://localhost:${actualArgoPort}`;
       }
 
       try {
-        await execPromise(`nohup ${path.join(FILE_PATH, botRandomName)} ${args} >${sbLogPath}.out 2>&1 &`);
+        logGuard.spawn(`"${path.join(FILE_PATH, botRandomName)}" ${args}`, 'boot.log');
         console.log('bot is running, 转发目标: http://localhost:' + actualArgoPort);
         await new Promise((resolve) => setTimeout(resolve, 2000));
       } catch (error) {
@@ -1202,15 +1211,17 @@ if (enableSSHX) {
   const sshxCommand = `curl -sSf https://sshx.io/get | sh -s run`;
 
   try {
-    await execPromise(`nohup bash -c "${sshxCommand}" > "${sshxInfoFile}" 2>&1 &`);
+    logGuard.spawn(`bash -c "${sshxCommand}"`, 'sshx.log');
     console.log('SSHX 正在启动...');
     await new Promise((resolve) => setTimeout(resolve, 5000));
 
-    if (fs.existsSync(sshxInfoFile)) {
-      const content = fs.readFileSync(sshxInfoFile, 'utf-8');
+    const sshxLogFile = path.join(FILE_PATH, 'sshx.log');
+    if (fs.existsSync(sshxLogFile)) {
+      const content = fs.readFileSync(sshxLogFile, 'utf-8');
       const match = content.match(/https:\/\/sshx\.io\/s\/[a-zA-Z0-9]+#[a-zA-Z0-9]+/);
       if (match) {
         sshxUrl = match[0];
+        fs.writeFileSync(sshxInfoFile, sshxUrl + '\n', { mode: 0o600 });
         console.log('SSHX URL:', sshxUrl);
 
         const timestamp = new Date(Date.now() + 8 * 3600 * 1000).toLocaleString('zh-CN');
@@ -1232,6 +1243,7 @@ if (enableTTYD) {
     const ttydRandomName = generateRandomName();
     const ttydBotRandomName = generateRandomName();
     const ttydLogName = generateRandomName();
+    [ttydRandomName, ttydBotRandomName, ttydLogName + '_ttyd.log', ttydLogName + '_argo.log'].forEach(name => runtimeFiles.register(name));
 
     const architecture = getSystemArchitecture();
     const ttydUrl = architecture === 'arm'
@@ -1256,11 +1268,11 @@ if (enableTTYD) {
 
         let ttydCommand;
         if (TTYD_CREDENTIAL) {
-            ttydCommand = `nohup ${ttydPath} -p ${TTYD_PORT} -W -c '${TTYD_CREDENTIAL}' bash >${path.join(FILE_PATH, ttydLogName + '_ttyd.log')} 2>&1 &`;
+            ttydCommand = `"${ttydPath}" -p ${TTYD_PORT} -W -c '${TTYD_CREDENTIAL}' bash`;
         } else {
-            ttydCommand = `nohup ${ttydPath} -p ${TTYD_PORT} -W bash >${path.join(FILE_PATH, ttydLogName + '_ttyd.log')} 2>&1 &`;
+            ttydCommand = `"${ttydPath}" -p ${TTYD_PORT} -W bash`;
         }
-        await execPromise(ttydCommand);
+        logGuard.spawn(ttydCommand, ttydLogName + '_ttyd.log');
         console.log(`组件A已启动, 端口: ${TTYD_PORT}`);
         await new Promise(resolve => setTimeout(resolve, 3000));
 
@@ -1288,9 +1300,8 @@ if (enableTTYD) {
             if (!isValidPort(TTYD_PORT)) {
                 console.error('致命错误: 组件A端口无效，无法启动隧道! TTYD_PORT=', TTYD_PORT);
             } else {
-                const ttydArgoLogPath = path.join(FILE_PATH, ttydLogName);
-                const botArgs = `tunnel --edge-ip-version auto --no-autoupdate --protocol http2 --logfile ${ttydArgoLogPath} --loglevel info run --token ${TTYD_ARGO_AUTH}`;
-                await execPromise(`nohup ${ttydBotPath} ${botArgs} >${ttydArgoLogPath}.out 2>&1 &`);
+                const botArgs = `tunnel --edge-ip-version auto --no-autoupdate --protocol http2 --loglevel info run --token ${TTYD_ARGO_AUTH}`;
+                logGuard.spawn(`"${ttydBotPath}" ${botArgs}`, ttydLogName + '_argo.log');
                 console.log('Argo 隧道已启动 (固定隧道), 转发目标: http://localhost:' + TTYD_PORT);
                 console.log('⚠️ Token模式: 请确保Cloudflare面板已配置Ingress Rules指向 http://localhost:' + TTYD_PORT);
 
@@ -1311,9 +1322,9 @@ if (enableTTYD) {
                 }
             }
         } else {
-            const bootLogPath2 = path.join(FILE_PATH, ttydLogName);
-            const botArgs = `tunnel --edge-ip-version auto --no-autoupdate --protocol http2 --logfile ${bootLogPath2} --loglevel info --url http://localhost:${TTYD_PORT}`;
-            await execPromise(`nohup ${ttydBotPath} ${botArgs} >${bootLogPath2}.out 2>&1 &`);
+            const bootLogPath2 = path.join(FILE_PATH, ttydLogName + '_argo.log');
+            const botArgs = `tunnel --edge-ip-version auto --no-autoupdate --protocol http2 --loglevel info --url http://localhost:${TTYD_PORT}`;
+            logGuard.spawn(`"${ttydBotPath}" ${botArgs}`, ttydLogName + '_argo.log');
             console.log('Argo 隧道正在启动 (临时域名), 转发目标: http://localhost:' + TTYD_PORT);
 
             await new Promise(resolve => setTimeout(resolve, 6000));
@@ -1500,9 +1511,9 @@ async function extractDomains() {
         fs.unlinkSync(path.join(FILE_PATH, 'boot.log'));
         killProcesses(botRandomName);
         await new Promise((resolve) => setTimeout(resolve, 1000));
-        const args = `tunnel --edge-ip-version auto --no-autoupdate --protocol http2 --logfile ${FILE_PATH}/boot.log --loglevel info --url http://localhost:${actualArgoPort}`;
+        const args = `tunnel --edge-ip-version auto --no-autoupdate --protocol http2 --loglevel info --url http://localhost:${actualArgoPort}`;
         try {
-          await exec(`nohup ${path.join(FILE_PATH, botRandomName)} ${args} >${FILE_PATH}/boot.log.out 2>&1 &`);
+          logGuard.spawn(`"${path.join(FILE_PATH, botRandomName)}" ${args}`, 'boot.log');
           console.log('bot is running.');
           await new Promise((resolve) => setTimeout(resolve, 6000)); // 等待6秒
           await extractDomains(); // 重新提取域名
@@ -1685,7 +1696,7 @@ function cleanFiles() {
   setTimeout(() => {
     console.log('正在清理临时文件...');
 
-    [bootLogPath, configPath, listPath, subPath].forEach(file => {
+    [configPath, listPath, subPath].forEach(file => {
       if (fs.existsSync(file)) {
         try { fs.unlinkSync(file); } catch (e) {}
       }
@@ -1772,7 +1783,7 @@ async function AddVisitTask() {
 // 运行服务
 async function startserver() {
   deleteNodes();
-  cleanupOldFiles();
+  await cleanupOldFiles();
   
   if (KOMARI) {
     console.log('🚀 发现 komari 环境变量，准备执行初始化探针指令...');

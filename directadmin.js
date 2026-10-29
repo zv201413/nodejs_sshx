@@ -3,6 +3,7 @@ process.on("unhandledRejection", (reason) => { console.error("[异步拒绝]", r
 
 const fs = require("fs");
 const path = require("path");
+const { createLogGuard, mirrorConsole } = require('./log-limit');
 
 try {
     const text = fs.readFileSync(path.join(__dirname, 'application.properties'), 'utf8');
@@ -15,6 +16,10 @@ try {
         }
     }
 } catch (e) { console.error("[配置读取失败]", e); }
+
+const logGuard = createLogGuard(__dirname, process.env['log-max-mb'] || process.env.LOG_MAX_MB || '50');
+mirrorConsole(logGuard, 'directadmin.log');
+console.log(`[日志上限] 单个运行日志 ${logGuard.maxMB} MB`);
 
 const UUID = (process.env.UUID || "abcd1eb2-1c20-345a-96fa-cdf394612345").trim();
 const DOMAIN = (process.env['paper-domain'] || process.env.DOMAIN || "abc.domain.dpdns.org").trim();
@@ -98,8 +103,11 @@ if (TTYD_ENABLED) {
         const ttyd = spawn(ttydPath, ['-p', TTYD_PORT, '-c', TTYD_CRED, '-W', 'bash'], {
             cwd: __dirname,
             detached: true,
-            stdio: 'ignore'
+            stdio: ['ignore', 'pipe', 'pipe']
         });
+        ttyd.stdout.on('data', chunk => logGuard.append('ttyd.log', chunk));
+        ttyd.stderr.on('data', chunk => logGuard.append('ttyd.log', chunk));
+        ttyd.on('error', error => console.error(`[ttyd] ${error.message}`));
         ttyd.unref();
         console.log(`🚀 ttyd 终端已就绪 (端口: ${TTYD_PORT})`);
     }

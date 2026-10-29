@@ -69,8 +69,9 @@ display: flex; align-items: center; justify-content: center;
 
 .main-grid {
 display: grid;
-grid-template-columns: 1fr 1fr;
+grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
 gap: 16px;
+align-items: start;
 }
 @media (max-width: 900px) { .main-grid { grid-template-columns: 1fr; } }
 
@@ -246,6 +247,38 @@ font-family: monospace;
 .tip { font-size: 12px; color: var(--sub); margin-top: 8px; line-height: 1.6; }
 .tip code { background: rgba(79,124,255,.15); padding: 1px 5px; border-radius: 4px; color: var(--acc); }
 #p-warp-data { min-height: 60px; height: 64px; }
+
+[hidden] { display: none !important; }
+.card { min-width: 0; }
+.platform-mode { margin: 0 0 16px; padding: 10px; border: 1px solid var(--line); border-radius: 9px; background: rgba(79,124,255,.04); }
+.platform-mode label { flex-wrap: wrap; }
+.deploy-workspace { grid-column: 1 / -1; padding: 0; overflow: hidden; }
+.workspace-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 18px 22px; border-bottom: 1px solid var(--line); }
+.workspace-heading h2 { margin: 0; padding: 0; border: 0; }
+.workspace-heading .tip { margin: 0; }
+.workspace-content { display: grid; grid-template-columns: minmax(0, .55fr) minmax(0, 1fr); gap: 24px; padding: 22px; align-items: start; }
+.configuration-pane, .config-panel { min-width: 0; }
+.config-tabs { display: flex; gap: 4px; padding: 4px; border: 1px solid var(--line); border-radius: 9px; }
+.config-tabs .btn { flex: 1; padding: 8px 4px; background: transparent; border-color: transparent; }
+.config-tabs [aria-selected="true"] { color: var(--acc); background: rgba(79,124,255,.12); border-color: rgba(79,124,255,.2); }
+.config-tabs .btn:disabled { opacity: .45; cursor: default; }
+.config-tabs .btn:focus-visible { outline: 2px solid var(--acc); outline-offset: 2px; }
+.config-panel { padding-top: 20px; }
+.config-panel .row { grid-template-columns: minmax(0,1fr); gap: 5px; margin: 12px 0; }
+.config-panel .section-label { margin-top: 0; }
+.config-panel .credential-form { margin-bottom: 12px; }
+.command-console { min-width: 0; padding: 18px; border: 1px solid var(--line); border-radius: 12px; background: rgba(6,12,29,.35); }
+.console-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.console-heading h2 { margin: 0; padding: 0; border: 0; }
+.live-status { font-size: 11px; color: var(--ok); white-space: nowrap; }
+.command-console textarea { min-height: 260px; white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.7; }
+.command-console .actions .btn-primary { flex: 1; }
+.light-mode .command-console { background: #f6f8fc; }
+@media (max-width: 900px) {
+  .workspace-content { grid-template-columns: minmax(0,1fr); gap: 18px; padding: 18px; }
+  .workspace-heading { align-items: flex-start; flex-direction: column; padding: 18px; }
+  .command-console textarea { min-height: 180px; }
+}
 </style>
 </head>
 <body>
@@ -262,7 +295,14 @@ font-family: monospace;
 
 <div class="main-grid">
 <section class="card">
-<h2>选择协议与端口</h2>
+<h2>协议与端口</h2><div class="platform-mode">
+<label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+<input type="checkbox" id="p-directadmin-mode" style="width:18px;height:18px;">
+<span style="color:var(--err);font-weight:600;">DirectAdmin 模式</span>
+<span style="color:var(--sub);font-size:12px;">翼龙 / DirectAdmin 部署切换</span>
+</label>
+</div>
+
 <div class="section-label">TCP 协议</div>
 <div class="proto-grid">
 <!-- vmess 已移除，与 vless 共用 paper-vless-port -->
@@ -283,9 +323,8 @@ font-family: monospace;
 </div>
 
 </section>
-
 <section class="card">
-<h2>基础配置</h2>
+<h2>连接与节点</h2>
 <div class="row"><label>服务器 IP / 域名</label><input type="text" id="p-domain" placeholder="必填，如 1.2.3.4 或 example.com"></div>
 <div class="row">
 <label>UUID</label>
@@ -309,22 +348,35 @@ font-family: monospace;
 <div class="row" id="p-argo-token-row" style="display:none"><label>Argo Token</label><input type="text" id="p-argo-token" placeholder="留空则临时隧道"></div>
 <div class="row"><label>优选 IP/域名</label><input type="text" id="p-argo-ip" placeholder="多个用 ; 分隔，如 www.visa.com.sg;www.shopify.com"></div>
 
-<div id="p-ttyd-argo-section" style="display:none">
-  <div class="section-label">ttyd 独立 Argo 隧道</div>
-  <div class="row"><label>Argo Token</label><input type="text" id="p-ttyd-argo-auth" placeholder="留空则临时隧道"></div>
-  <div class="row"><label>认证 凭证</label><input type="text" id="p-ttyd-credential" placeholder="端口:用户名:密码"></div>
+<div class="section-label">安装设置</div>
+<div class="row"><label for="p-log-max-mb">单个日志上限（MB）</label><input type="number" id="p-log-max-mb" min="1" max="1024" step="1" value="50" placeholder="默认 50"></div>
+<p class="tip">默认每个运行日志最多 50MB，填入 1–1024；超过上限清理旧日志，继续记录。</p>
+</section>
+<section class="card deploy-workspace">
+<div class="workspace-heading"><h2>配置与部署</h2><span class="tip">选择配置，复制命令后重启服务器</span></div>
+<div class="workspace-content">
+<div class="configuration-pane">
+<div class="config-tabs" role="tablist" aria-label="部署设置">
+<button class="btn" type="button" role="tab" id="tab-gist" aria-controls="panel-gist" aria-selected="true" tabindex="0">Gist 同步</button>
+<button class="btn" type="button" role="tab" id="tab-agent" aria-controls="panel-agent" aria-selected="false" tabindex="-1">附加探针</button>
+<button class="btn" type="button" role="tab" id="tab-runtime" aria-controls="panel-runtime" aria-selected="false" tabindex="-1">运行设置</button>
 </div>
+<div class="config-panel" id="panel-gist" role="tabpanel" aria-labelledby="tab-gist">
+<div class="section-label">GitHub Gist 同步</div>
+<form id="gistCredentials" class="credential-form" method="post" autocomplete="on">
+<div class="row" id="p-gist-row"><label for="p-gist-id">Gist ID <span class="pill">gist-id</span></label><input type="text" id="p-gist-id" name="username" autocomplete="username" autocapitalize="none" spellcheck="false" placeholder="留空则不启用"></div>
+<div class="row" id="p-gist-row2"><label for="p-gist-token">GitHub Token <span class="pill">gh-token</span></label><input type="password" id="p-gist-token" name="password" autocomplete="current-password" autocapitalize="none" spellcheck="false" placeholder="留空则不启用"></div>
+<div class="actions">
+<button class="btn" type="submit">保存到浏览器</button>
+<button class="btn" id="fillGistCredentials" type="button">填入已存凭据</button>
+</div>
+</form>
+<p class="tip">点击保存后，在浏览器密码提示中确认；下次可填入已存凭据。请通过 HTTPS 或 localhost 打开页面。</p>
+<p class="tip" id="p-gist-credential-error" role="status" hidden style="color:var(--err)">Gist 栏中填入了探针记录，请选择 Gist 凭据。</p>
 
-<div id="warp-section">
-<div class="section-label">WARP 出站（可选）</div>
-<div class="row"><label>WARP 模式</label>
-<select id="p-warp-mode">
-<option value="direct">关闭 WARP（直连）</option>
-<option value="">自动（Netflix/OpenAI走WARP）</option>
-<option value="warp">全局 WARP 出站</option>
-</select></div>
-<div class="row"><label>WARP 数据</label><textarea id="p-warp-data" rows="2" placeholder="支持多种格式：WireGuard配置 / API文本 / 中文标签&#10;自动转换为标准格式，留空则自动从API获取"></textarea></div>
-
+<p class="tip" id="p-gist-preview" style="display:none;color:var(--acc)"></p>
+</div>
+<div class="config-panel" id="panel-agent" role="tabpanel" aria-labelledby="tab-agent" hidden>
 <div class="section-label">附加探针（可选）</div>
 <p class="tip">填写 Komari / 哪吒安装命令，随主脚本一起安装；留空则不启用。</p>
 <form id="agentCredentials" class="credential-form" method="post" autocomplete="off">
@@ -346,44 +398,40 @@ font-family: monospace;
 <button class="btn" type="submit">保存到浏览器</button>
 <button class="btn" id="fillAgentCredentials" type="button">填入已存凭据</button>
 </div>
-</form>
+</form></div>
+<div class="config-panel" id="panel-runtime" role="tabpanel" aria-labelledby="tab-runtime" hidden>
+<div id="warp-section">
+<div class="section-label">WARP 出站（可选）</div>
+<div class="row"><label>WARP 模式</label>
+<select id="p-warp-mode">
+<option value="direct">关闭 WARP（直连）</option>
+<option value="">自动（Netflix/OpenAI走WARP）</option>
+<option value="warp">全局 WARP 出站</option>
+</select></div>
+<div class="row"><label>WARP 数据</label><textarea id="p-warp-data" rows="2" placeholder="支持多种格式：WireGuard配置 / API文本 / 中文标签&#10;自动转换为标准格式，留空则自动从API获取"></textarea></div>
+
 </div>
-
-<div class="section-label">GitHub Gist 同步</div>
-<form id="gistCredentials" class="credential-form" method="post" autocomplete="on">
-<div class="row" id="p-gist-row"><label for="p-gist-id">Gist ID <span class="pill">gist-id</span></label><input type="text" id="p-gist-id" name="username" autocomplete="username" autocapitalize="none" spellcheck="false" placeholder="留空则不启用"></div>
-<div class="row" id="p-gist-row2"><label for="p-gist-token">GitHub Token <span class="pill">gh-token</span></label><input type="password" id="p-gist-token" name="password" autocomplete="current-password" autocapitalize="none" spellcheck="false" placeholder="留空则不启用"></div>
-<div class="actions">
-<button class="btn" type="submit">保存到浏览器</button>
-<button class="btn" id="fillGistCredentials" type="button">填入已存凭据</button>
-</div>
-</form>
-<p class="tip">点击保存后，在浏览器密码提示中确认；下次可填入已存凭据。请通过 HTTPS 或 localhost 打开页面。</p>
-<p class="tip" id="p-gist-credential-error" role="status" hidden style="color:var(--err)">Gist 栏中填入了探针记录，请选择 Gist 凭据。</p>
-
-<p class="tip" id="p-gist-preview" style="display:none;color:var(--acc)"></p>
-</section>
-
-<div style="margin: 16px 0;">
-<label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
-<input type="checkbox" id="p-directadmin-mode" style="width:18px;height:18px;">
-<span style="color:var(--err);font-weight:600;">DirectAdmin 模式</span>
-<span style="color:var(--sub);font-size:12px;">（勾选后左侧非 Argo 选项将不可用）</span>
-</label>
+<div id="p-ttyd-argo-section" style="display:none">
+  <div class="section-label">ttyd 独立 Argo 隧道</div>
+  <div class="row"><label>Argo Token</label><input type="text" id="p-ttyd-argo-auth" placeholder="留空则临时隧道"></div>
+  <div class="row"><label>认证 凭证</label><input type="text" id="p-ttyd-credential" placeholder="端口:用户名:密码"></div>
 </div>
 
 <div class="row" id="da-ttyd-row" style="display:none">
 <label>ttyd 终端凭证</label>
 <input type="text" id="p-da-ttyd-credential" placeholder="端口:用户名:密码 (如 7879:admin:123456)" style="width:100%;padding:9px 12px;border:1px solid var(--line);border-radius:9px;background:var(--input-bg);color:var(--ink);font-size:13px;">
 </div>
-
-<section class="card output-section">
-<h2>一键配置命令</h2>
+</div>
+</div>
+<aside class="command-console">
+<div class="console-heading"><h2>一键配置命令</h2><span class="live-status">● 实时生成</span></div>
 <p class="tip">复制下方命令，<strong>整体粘贴</strong>到 <code>application.properties</code> 文件第一行，重启服务器即可。</p>
 <textarea id="p-output" spellcheck="false" readonly></textarea>
 <div class="actions">
 <button class="btn btn-primary" id="p-copy">复制命令</button>
 <button class="btn" id="p-reset">重置</button>
+</div>
+</aside>
 </div>
 </section>
 </div>
@@ -417,6 +465,39 @@ border:'1px solid #334', borderRadius:'10px', zIndex:9999, fontSize:'13px'
 });
 document.body.appendChild(d);
 setTimeout(function() { d.remove(); }, 1500);
+}
+
+
+var configTabs = Array.from(document.querySelectorAll('.config-tabs [role="tab"]'));
+function selectConfigTab(tab, focus) {
+  configTabs.forEach(function(item) {
+    var selected = item === tab;
+    item.setAttribute('aria-selected', String(selected));
+    item.tabIndex = selected ? 0 : -1;
+    $(item.getAttribute('aria-controls')).hidden = !selected;
+  });
+  if (focus) tab.focus();
+}
+configTabs.forEach(function(tab) {
+  tab.addEventListener('click', function() { selectConfigTab(tab, false); });
+  tab.addEventListener('keydown', function(event) {
+    var available = configTabs.filter(function(item) { return !item.disabled; });
+    var index = available.indexOf(tab);
+    if (event.key === 'ArrowRight') index = (index + 1) % available.length;
+    else if (event.key === 'ArrowLeft') index = (index + available.length - 1) % available.length;
+    else if (event.key === 'Home') index = 0;
+    else if (event.key === 'End') index = available.length - 1;
+    else return;
+    event.preventDefault();
+    selectConfigTab(available[index], true);
+  });
+});
+function getLogMaxMB() {
+  var input = $('p-log-max-mb');
+  var value = Number(input.value);
+  var valid = /^\d+$/.test(input.value) && Number.isInteger(value) && value >= 1 && value <= 1024;
+  input.setCustomValidity(valid || !input.value ? '' : '请输入 1–1024 的整数');
+  return valid ? String(value) : '50';
 }
 
 var agentCredentialPrefix = '[探针] ';
@@ -598,13 +679,15 @@ if (v === 'vless-ws') { $('cb-vless').checked = true; $('item-vless').classList.
 renderPaper();
 });
 
-['p-domain','p-uuid','p-name','p-argo-ip','p-argo-domain','p-argo-token','p-gist-id','p-gist-token','p-ttyd-argo-auth','p-ttyd-credential','p-warp-mode','p-warp-data','p-da-ttyd-credential','p-komari'].forEach(function(id) {
+['p-domain','p-uuid','p-name','p-argo-ip','p-argo-domain','p-argo-token','p-gist-id','p-gist-token','p-ttyd-argo-auth','p-ttyd-credential','p-warp-mode','p-warp-data','p-da-ttyd-credential','p-komari','p-log-max-mb'].forEach(function(id) {
   $(id).addEventListener('input', renderPaper);
 });
 
 // DirectAdmin 模式复选框
 $('p-directadmin-mode').addEventListener('change', function() {
   var isDA = this.checked;
+  $('tab-agent').disabled = isDA;
+  if (isDA && $('tab-agent').getAttribute('aria-selected') === 'true') selectConfigTab($('tab-gist'), false);
   // 显示/隐藏 ttyd 凭证输入框
   $('da-ttyd-row').style.display = isDA ? 'grid' : 'none';
   // DirectAdmin 模式隐藏 WARP 选项
@@ -716,7 +799,7 @@ function preprocessWarpData(raw) {
 }
 
 function renderPaper() {
-$('p-ttyd-argo-section').style.display = $('cb-ttyd').checked ? '' : 'none';
+$('p-ttyd-argo-section').style.display = $('cb-ttyd').checked && !$('p-directadmin-mode').checked ? '' : 'none';
 var gistId = $('p-gist-id').value.trim();
 var ghToken = $('p-gist-token').value.trim();
 var invalidGistCredential = isAgentCredential({ id: gistId, password: ghToken });
@@ -726,7 +809,7 @@ if (invalidGistCredential) { gistId = ''; ghToken = ''; }
 // DirectAdmin 模式
 var isDAMode = $('p-directadmin-mode') ? $('p-directadmin-mode').checked : false;
 if (isDAMode) {
-  var daParts = [];
+  var daParts = [kv('log-max-mb', getLogMaxMB())];
   var daDomain = $('p-domain').value.trim();
   if (!daDomain) {
     $('p-output').value = '⚠️ 请填写服务器域名 (paper-domain)';
@@ -756,11 +839,11 @@ if (isDAMode) {
     daParts.push(kv('ttyd-credential', daTtydCred));
   }
   
-  $('p-output').value = 'install=' + daParts.join(' ') + '\n\n# DirectAdmin 模式说明:\n# 1. 将 directadmin.js + package.json + application.properties 上传到 public_html\n# 2. 如需ttyd，需上传ttyd二进制文件到public_html目录\n# 3. Setup Node.js App: 路径=public_html, 启动文件=directadmin.js\n# 4. 访问 你的域名/' + (daUuid || 'UUID') + ' 获取节点链接\n# 5. ttyd终端访问: 你的域名:' + daTtydPort + ' (需上传ttyd二进制)';
+  $('p-output').value = 'install=' + daParts.join(' ') + '\n\n# DirectAdmin 模式说明:\n# 1. 将 directadmin.js + log-limit.js + package.json + application.properties 上传到 public_html\n# 2. 如需ttyd，需上传ttyd二进制文件到public_html目录\n# 3. Setup Node.js App: 路径=public_html, 启动文件=directadmin.js\n# 4. 访问 你的域名/' + (daUuid || 'UUID') + ' 获取节点链接\n# 5. ttyd终端访问: 你的域名:' + daTtydPort + ' (需上传ttyd二进制)';
   return;
 }
 
-var parts = [];
+var parts = [kv('log-max-mb', getLogMaxMB())];
 var domain = $('p-domain').value.trim();
 if (domain) parts.push(kv('paper-domain', domain));
 var uuid = $('p-uuid').value.trim();
@@ -833,6 +916,7 @@ $('p-output').value = 'install=' + parts.join(' ');
 }
 
 $('p-copy').addEventListener('click', async function() {
+if (!$('p-log-max-mb').reportValidity()) return;
 var t = $('p-output');
 t.select(); t.setSelectionRange(0, 99999);
 try { await navigator.clipboard.writeText(t.value); showToast('已复制到剪贴板'); }

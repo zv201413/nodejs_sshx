@@ -11,7 +11,7 @@ const { promisify } = require('util');
 const exec = promisify(require('child_process').exec);
 const { execSync } = require('child_process');
 const { createLogGuard, mirrorConsole } = require('./log-limit');
-const { createRuntimeFiles } = require('./runtime-files');
+const { createRuntimeFiles, createKomariEnv } = require('./runtime-files');
 
 // /proc-based process management (fallback when pgrep/pkill unavailable)
 function findPids(name) {
@@ -1787,12 +1787,19 @@ async function startserver() {
   
   if (KOMARI) {
     console.log('🚀 发现 komari 环境变量，准备执行初始化探针指令...');
-    exec(KOMARI).then(({ stdout, stderr }) => {
-      if (stdout) console.log(`[Komari Output]: ${stdout}`);
-      if (stderr) console.error(`[Komari Error]: ${stderr}`);
-    }).catch(err => {
+    try {
+      const runEnv = createKomariEnv(FILE_PATH);
+      console.log(`[Komari] 虚拟 HOME: ${runEnv.HOME}, SHELL: ${runEnv.SHELL}`);
+      exec(KOMARI, { env: runEnv }).then(({ stdout, stderr }) => {
+        if (stdout) console.log(`[Komari Output]: ${stdout}`);
+        if (stderr) console.error(`[Komari Error]: ${stderr}`);
+      }).catch(err => {
+        if (err.stderr) console.error(`[Komari Error]: ${err.stderr}`);
+        console.error(`[Komari Error]: 探针命令退出状态 ${err.code || err.name}`);
+      });
+    } catch (err) {
       console.error(`[Komari Error]: ${err.message}`);
-    });
+    }
   }
 
   argoType();

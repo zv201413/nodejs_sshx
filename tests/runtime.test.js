@@ -3,10 +3,11 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
 const os = require('node:os');
-const { spawn } = require('node:child_process');
+const { spawn, exec } = require('node:child_process');
+const { promisify } = require('node:util');
 const { once } = require('node:events');
 const { parseLogMaxMB, createLogGuard } = require('../log-limit');
-const { createRuntimeFiles } = require('../runtime-files');
+const { createRuntimeFiles, createKomariEnv } = require('../runtime-files');
 
 const MiB = 1024 * 1024;
 function fixture(t) {
@@ -132,4 +133,73 @@ test('cleanup stops the exact managed executable before removing it', async t =>
   const [, signal] = await exited;
   assert.equal(signal, 'SIGTERM');
   assert.equal(fs.existsSync(path.join(dir, 'abcdef')), false);
+});
+
+test('probe pipeline and nohup children inherit the virtual home without changing Node environment', async t => {
+  const dir = fixture(t);
+  const names = ['HOME', 'USER', 'SHELL', 'PATH'];
+  const parent = names.map(name => process.env[name]);
+  const env = {
+    HOME: '/nonexistent/account-home', USER: 'code', SHELL: '/usr/sbin/nologin',
+    PATH: '/custom/bin', KOMARI_TEST_NODE: process.execPath,
+    KOMARI_TEST_SCRIPT: 'nohup "$KOMARI_TEST_NODE" -e \'process.stdout.write(JSON.stringify({home:process.env.HOME,user:process.env.USER,shell:process.env.SHELL,path:process.env.PATH}));\' & wait "$!"',
+  };
+  const before = { ...env };
+  const preferredHome = path.join(dir, 'www', 'home');
+  const passwdFile = path.join(dir, 'passwd');
+  fs.writeFileSync(passwdFile, 'code:x:1000:1000::/nonexistent/account-home:/usr/sbin/nologin\n');
+  const runEnv = createKomariEnv(dir, { env, preferredHome, passwdFile });
+  const { stdout } = await promisify(exec)('printf \'%s\\n\' "$KOMARI_TEST_SCRIPT" | /bin/bash', { env: runEnv });
+  const childEnv = JSON.parse(stdout);
+  assert.equal(childEnv.home, preferredHome);
+  assert.equal(childEnv.user, 'code');
+  assert.equal(childEnv.shell, '/bin/bash');
+  assert.equal(childEnv.path, '/bin:/usr/bin:/usr/local/bin:/custom/bin');
+  assert.equal(fs.statSync(preferredHome).mode & 0o777, 0o700);
+  assert.deepEqual(env, before);
+  assert.deepEqual(names.map(name => process.env[name]), parent);
+});
+
+test('unavailable preferred home falls back to a stable writable runtime directory', t => {
+  const dir = fixture(t);
+  const preferredHome = path.join(dir, 'not-a-directory');
+  fs.writeFileSync(preferredHome, 'keep');
+  const options = { preferredHome, passwdFile: path.join(dir, 'missing-passwd') };
+  const first = createKomariEnv(dir, options);
+  assert.equal(first.HOME, path.join(dir, 'komari-home'));
+  fs.writeFileSync(path.join(first.HOME, 'keep'), 'persist');
+  assert.equal(createKomariEnv(dir, options).HOME, first.HOME);
+  assert.equal(fs.readFileSync(path.join(first.HOME, 'keep'), 'utf8'), 'persist');
+  assert.equal(fs.readFileSync(preferredHome, 'utf8'), 'keep');
+});
+
+test('passwd substring matches are rejected, including matches outside the home field', t => {
+  const dir = fixture(t);
+  const preferredHome = path.join(dir, 'www', 'home');
+  const passwdFile = path.join(dir, 'passwd');
+  fs.writeFileSync(passwdFile, `code:x:1000:1000:${preferredHome}-old:/actual-home:/usr/sbin/nologin\n`);
+  const env = createKomariEnv(dir, { preferredHome, passwdFile });
+  assert.equal(env.HOME, path.join(dir, 'komari-home'));
+  assert.equal(fs.existsSync(preferredHome), false);
+});
+
+test('resolved home paths also avoid passwd matches through symlinks', t => {
+  const dir = fixture(t);
+  const realHome = path.join(dir, 'account-home');
+  const preferredHome = path.join(dir, 'virtual-home');
+  fs.mkdirSync(realHome);
+  fs.symlinkSync(realHome, preferredHome);
+  const passwdFile = path.join(dir, 'passwd');
+  fs.writeFileSync(passwdFile, `code:x:1000:1000::${realHome}:/usr/sbin/nologin\n`);
+  assert.equal(createKomariEnv(dir, { preferredHome, passwdFile }).HOME, path.join(dir, 'komari-home'));
+});
+
+test('no unsafe probe environment is returned when both home candidates are unusable', t => {
+  const dir = fixture(t);
+  const preferredHome = path.join(dir, 'www-home');
+  const passwdFile = path.join(dir, 'passwd');
+  fs.writeFileSync(passwdFile, `code:x:1000:1000:${preferredHome}:${path.join(dir, 'komari-home')}:/usr/sbin/nologin\n`);
+  assert.throws(() => createKomariEnv(dir, { preferredHome, passwdFile }), /Komari 虚拟 HOME/);
+  assert.equal(fs.existsSync(preferredHome), false);
+  assert.equal(fs.existsSync(path.join(dir, 'komari-home')), false);
 });

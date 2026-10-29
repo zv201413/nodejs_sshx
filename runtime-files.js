@@ -2,6 +2,7 @@
 
 const fs = require('node:fs');
 const path = require('node:path');
+const os = require('node:os');
 
 const MANIFEST = '.runtime-files.json';
 const managedName = name => typeof name === 'string'
@@ -110,4 +111,43 @@ function createRuntimeFiles(directory) {
   return { register, cleanup };
 }
 
-module.exports = { createRuntimeFiles, isLegacyComponent, managedName };
+// Komari matches HOME anywhere in a passwd line, even when the shell is nologin.
+// Scope the virtual home to the probe command; Node/npm keep their original HOME.
+function createKomariEnv(directory, {
+  env = process.env,
+  preferredHome = '/www/home',
+  passwdFile = '/etc/passwd',
+} = {}) {
+  let passwd = '';
+  try { passwd = fs.readFileSync(passwdFile, 'utf8'); } catch (_) {}
+  const homes = [preferredHome, path.resolve(directory, 'komari-home')];
+  let home;
+  for (const candidate of homes) {
+    try {
+      if (passwd.includes(path.resolve(candidate))) continue;
+      fs.mkdirSync(candidate, { recursive: true, mode: 0o700 });
+      const resolved = fs.realpathSync(candidate);
+      if (!fs.statSync(resolved).isDirectory() || passwd.includes(resolved)) continue;
+      fs.accessSync(resolved, fs.constants.W_OK | fs.constants.X_OK);
+      home = resolved;
+      break;
+    } catch (_) { /* Restricted containers may not allow writing to /www. */ }
+  }
+  if (!home) throw new Error('无法创建可写且不匹配 /etc/passwd 的 Komari 虚拟 HOME');
+
+  let shell = '/bin/bash';
+  try { fs.accessSync(shell, fs.constants.X_OK); } catch (_) { shell = '/bin/sh'; }
+  let user = env.USER || env.LOGNAME;
+  if (!user) {
+    try { user = os.userInfo().username; } catch (_) { user = 'code'; }
+  }
+  return {
+    ...env,
+    HOME: home,
+    USER: user,
+    SHELL: shell,
+    PATH: '/bin:/usr/bin:/usr/local/bin' + (env.PATH ? ':' + env.PATH : ''),
+  };
+}
+
+module.exports = { createRuntimeFiles, isLegacyComponent, managedName, createKomariEnv };

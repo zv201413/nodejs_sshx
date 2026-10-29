@@ -119,6 +119,17 @@ A: 1) 检查服务器是否支持 IPv6（`ip a` 或 `curl -6 ifconfig.co`）；2
 3. 生成的 `install=` 命令末尾会自动追加 `komari="..."` 参数
 4. 启动翼龙面板后，Node.js 脚本会自动在后台以**非阻塞方式**执行该命令，安装并运行探针
 
+### CodeRed / nologin 终端兼容
+
+主程序已整合 CodeRed 的虚拟 HOME 处理，上传新版 `index.js` 和 `runtime-files.js` 即可，无需修改容器启动脚本：
+
+- 自动创建并使用 `/www/home`；目录不可写或路径出现在 `/etc/passwd` 中时，回退到 `FILE_PATH/komari-home`（默认 `.npm/komari-home`），使用绝对路径。
+- 为探针命令及其子进程设置 `HOME`、`SHELL=/bin/bash` 和包含 `/bin:/usr/bin:/usr/local/bin` 的 PATH；没有 Bash 时使用 `/bin/sh`。`USER` 保留当前用户名，CodeRed 中为 `code`。
+- Komari 按 HOME 查找默认 shell 时不再匹配 `nologin` 条目，进入 `zsh → bash → sh` 回退流程。`SHELL` 变量本身不会覆盖 Komari 的 shell 选择。
+- 主程序的 HOME 不受影响，虚拟目录跨重启复用。如果两个候选目录均不可用，只跳过探针并报告错误，核心服务继续启动。
+
+此方式适用于容器内直接启动或 `nohup` 启动的探针。若安装命令通过 systemd、Supervisor 或 `sudo` 启动探针，还需在对应服务中配置相同的环境变量；服务管理器可能不会继承安装进程的环境。已经运行的探针需要重启后才会使用新环境。
+
 ### 参数说明
 
 | 参数 | 说明 |

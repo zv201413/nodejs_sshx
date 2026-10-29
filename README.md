@@ -26,6 +26,8 @@
 
 翼龙面板现已原生支持 **Komari** / 哪吒监控探针。在参数面板中填入命令即可，无需额外转换工具。详见 [翼龙面板部署教程 - 探针集成](./README_Pterodactyl.md#探针集成komari--哪吒监控)。
 
+探针命令会自动使用虚拟 HOME，优先 `/www/home`，不可写或与 `/etc/passwd` 匹配时回退到运行目录下的 `komari-home`，避开 CodeRed 等容器用户的 `nologin` shell。环境只注入探针子进程，主程序 HOME 保持原值。
+
 ## 浏览器保存探针与 Gist 凭据
 
 [配置生成器](https://zv201413.github.io/nodejs_sshx/) 的「附加探针」支持以备注保存完整安装命令，「GitHub Gist 同步」支持保存 Gist ID 与 Token。填写后点击「保存到浏览器」，在浏览器密码提示中确认；下次点击「填入已存凭据」选择对应记录，配置命令会立即更新。探针安装命令可切换显示，GitHub Token 默认遮挡。

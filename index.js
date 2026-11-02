@@ -14,6 +14,7 @@ const { execSync } = require('child_process');
 const { createLogGuard, mirrorConsole } = require('./log-limit');
 const { createRuntimeFiles, createKomariEnv } = require('./runtime-files');
 const { ensureTlsCertificate } = require('./tls-cert');
+const { createHyp2pService } = require('./hyp2p');
 const { buildTlsNode, makeIosSubscription, buildSingboxConfig, subscriptionFiles, registerSubscriptionRoutes } = require('./tls-links');
 
 // /proc-based process management (fallback when pgrep/pkill unavailable)
@@ -56,7 +57,8 @@ function parseInstallParams() {
     while ((match = paramRegex.exec(paramsStr)) !== null) {
       let val = match[2];
       // 处理转义字符: \\n -> \n, \\r -> \r, \\" -> ", \\ -> \
-      val = val.replace(/\\n/g, '\n').replace(/\\r/g, '\r').replace(/\\"/g, '"').replace(/\\\\/g, '\\');
+      try { val = JSON.parse('"' + val + '"'); }
+      catch (_) { val = val.replace(/\\n/g, '\n').replace(/\\r/g, '\r').replace(/\\"/g, '"').replace(/\\\\/g, '\\'); }
       installParams[match[1]] = val;
     }
   }
@@ -70,10 +72,13 @@ function parseInstallParams() {
         if (trimmed && trimmed.startsWith('install=')) {
           const paramsStr = trimmed.substring(8);
           // 支持 paper-name="xxx" 格式 (带连字符的key)
-          const paramRegex = /([a-zA-Z_][a-zA-Z0-9_\-]*)="([^"]*)"/g;
+          const paramRegex = /([a-zA-Z_][a-zA-Z0-9_\-]*)="((?:[^"\\]|\\.)*)"/g;
           let match;
           while ((match = paramRegex.exec(paramsStr)) !== null) {
-            installParams[match[1]] = match[2];
+            let val = match[2];
+            try { val = JSON.parse('"' + val + '"'); }
+            catch (_) { val = val.replace(/\\n/g, '\n').replace(/\\r/g, '\r').replace(/\\"/g, '"').replace(/\\\\/g, '\\'); }
+            installParams[match[1]] = val;
           }
         }
       });
@@ -257,6 +262,17 @@ const logGuard = createLogGuard(FILE_PATH, LOG_MAX_MB);
 const runtimeFiles = createRuntimeFiles(FILE_PATH);
 mirrorConsole(logGuard, 'runtime.log');
 console.log(`📜 单个运行日志上限: ${logGuard.maxMB} MB`);
+const hyp2p = createHyp2pService({
+  directory: FILE_PATH, getConfig, runtimeFiles, logGuard,
+  download: async (url, filename) => {
+    const response = await axios.get(url, { responseType: 'stream', timeout: 120000 });
+    await promisify(require('stream').pipeline)(response.data, fs.createWriteStream(filename, { flags: 'wx', mode: 0o700 }));
+  },
+});
+for (const signal of ['SIGINT', 'SIGTERM']) {
+  process.once(signal, () => { hyp2p.stop().finally(() => process.exit(0)); });
+}
+process.once('exit', () => { hyp2p.stop(); });
 
 let privateKey = '';
 let publicKey = '';
@@ -1731,6 +1747,8 @@ async function AddVisitTask() {
 async function startserver() {
   deleteNodes();
   await cleanupOldFiles();
+  // Independent of sing-box ports and WARP; a P2P failure does not stop other services.
+  hyp2p.start().catch(error => console.error(`[HYP2P] 初始化失败：${error.message}`));
   if ([isValidPort(PAPER_HY2_PORT) ? PAPER_HY2_PORT : HY2_PORT,
     isValidPort(PAPER_TUIC_PORT) ? PAPER_TUIC_PORT : TUIC_PORT, ANYTLS_PORT].some(isValidPort)) {
     try {

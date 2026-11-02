@@ -6,10 +6,11 @@ const os = require('node:os');
 
 const MANIFEST = '.runtime-files.json';
 const managedName = name => typeof name === 'string'
-  && /^(?:[a-z]{6}(?:_(?:ttyd|argo)\.log)?(?:\.out)?|boot\.log(?:\.out)?|sshx\.log|s\.txt|list\.txt)$/.test(name);
+  && /^(?:[a-z]{6}(?:_(?:ttyd|argo)\.log)?(?:\.out)?|boot\.log(?:\.out)?|sshx\.log|hyp2p\.log|s\.txt|list\.txt)$/.test(name);
 const binarySignatures = [
   'github.com/sagernet/sing-box', 'github.com/cloudflare/cloudflared',
   'github.com/nezhahq/agent', 'github.com/naiba/nezha', 'libwebsockets',
+  'github.com/apernet/hysteria',
 ];
 
 // Migrate old six-letter downloads only when their contents identify a bundled component.

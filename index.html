@@ -317,6 +317,18 @@ font-family: monospace;
 <div class="proto-item" id="item-tupt"><label><input type="checkbox" id="cb-tupt"> Tuic</label><input type="text" class="port-input" id="pt-tupt" placeholder="25570" value="25570"></div>
 </div>
 <p class="tip" id="tls-sub-tip">Hysteria2 / TUIC / AnyTLS 默认使用自签证书公钥校验。电脑端导入 <code>/sub</code>；iOS 兼容版单独位于 <code>/sub-ios</code>，跳过证书校验。不识别 pin 的电脑客户端可从 <code>/sub-cert.pem</code> 下载证书导入。</p>
+<div id="hyp2p-section">
+<div class="section-label">P2P 打洞（Hysteria2）</div>
+<div class="proto-item" id="item-hyp2p"><label><input type="checkbox" id="cb-hyp2p" autocomplete="off" aria-controls="p-hyp2p-fields" aria-expanded="false"> 启用 P2P 打洞</label></div>
+<p class="tip">默认关闭。启用后使用独立客户端直连，无需填写服务器 IP 或映射入站端口。</p>
+<div id="p-hyp2p-fields" hidden>
+<div class="row"><label for="p-hyp2p-auth">Auth 认证密码</label><input type="password" id="p-hyp2p-auth" autocomplete="new-password" spellcheck="false" placeholder="必填，客户端使用相同密码" disabled></div>
+<div class="row"><label for="p-hyp2p-obfs">Obfs 混淆密码</label><input type="password" id="p-hyp2p-obfs" autocomplete="new-password" spellcheck="false" placeholder="Salamander 混淆，至少 4 字节；留空不混淆" disabled></div>
+<div class="row"><label for="p-hyp2p-rv">Realm 牵线地址</label><input type="text" id="p-hyp2p-rv" autocomplete="off" spellcheck="false" placeholder="留空使用公共 realm.hy2.io" disabled></div>
+<p class="tip">自建无 TLS：<code>realm+http://token@IP:8443/名字</code>；有 TLS：<code>realm://token@域名/名字</code>。部署后读取 <code>.npm/p2p/client.example.yaml</code>，本地用官方 Hysteria2 客户端运行；普通节点订阅不包含 P2P 配置。</p>
+</div>
+<p class="tip" id="p-hyp2p-error" role="status" hidden style="color:var(--err)"></p>
+</div>
 <div class="section-label">网页终端</div>
 <div class="proto-grid">
 <div class="proto-item" id="item-ttyd"><label><input type="checkbox" id="cb-ttyd"> ttyd</label><span style="font-size:11px;color:var(--sub)">独立Argo隧道</span></div>
@@ -650,6 +662,53 @@ showToast('UUID 已生成');
 // 节点名称前缀输入时更新预览
 $('p-name').addEventListener('input', updateNamePreview);
 
+// Every fresh page starts with P2P disabled, including browsers that restore checkboxes.
+$('cb-hyp2p').checked = false;
+$('cb-hyp2p').addEventListener('change', renderPaper);
+['p-hyp2p-auth', 'p-hyp2p-obfs', 'p-hyp2p-rv'].forEach(function(id) {
+  $(id).addEventListener('input', renderPaper);
+});
+
+function syncHyp2pControls() {
+  var isDA = $('p-directadmin-mode').checked;
+  var active = $('cb-hyp2p').checked && !isDA;
+  $('hyp2p-section').hidden = isDA;
+  $('cb-hyp2p').disabled = isDA;
+  $('cb-hyp2p').setAttribute('aria-expanded', String(active));
+  $('item-hyp2p').classList.toggle('active', active);
+  $('p-hyp2p-fields').hidden = !active;
+  ['p-hyp2p-auth', 'p-hyp2p-obfs', 'p-hyp2p-rv'].forEach(function(id) {
+    $(id).disabled = !active;
+    $(id).setCustomValidity('');
+  });
+  $('p-hyp2p-auth').required = active;
+  var error = '';
+  if (active) {
+    var auth = $('p-hyp2p-auth').value;
+    var obfs = $('p-hyp2p-obfs').value;
+    var realm = $('p-hyp2p-rv').value.trim();
+    if (!auth.trim()) error = '请填写 P2P 的 Auth 认证密码。';
+    else if (obfs && new TextEncoder().encode(obfs).length < 4) error = 'Obfs 混淆密码至少需要 4 字节。';
+    else if (realm) {
+      var valid = false;
+      try {
+        var uri = new URL(realm);
+        decodeURIComponent(uri.username);
+        decodeURIComponent(uri.pathname);
+        valid = /^realm(?:\+http)?:\/\//.test(realm) && !/[\s\\]/.test(realm)
+          && uri.hostname && uri.username && !uri.password && !uri.search && !uri.hash
+          && /^\/[^/]+$/.test(uri.pathname)
+          && (!uri.port || (/^\d+$/.test(uri.port) && Number(uri.port) >= 1 && Number(uri.port) <= 65535));
+      } catch (e) {}
+      if (!valid) error = 'Realm 地址格式应为 realm://token@主机/名字 或 realm+http://token@主机:端口/名字。';
+    }
+  }
+  $('p-hyp2p-error').textContent = error;
+  $('p-hyp2p-error').hidden = !error;
+  $('p-copy').disabled = Boolean(error);
+  return error;
+}
+
 var paperProtos = [
 {cb:'cb-vless',pt:'pt-vless',item:'item-vless'},
 {cb:'cb-anpt', pt:'pt-anpt', item:'item-anpt' },
@@ -801,6 +860,7 @@ function preprocessWarpData(raw) {
 }
 
 function renderPaper() {
+var hyp2pError = syncHyp2pControls();
 $('p-ttyd-argo-section').style.display = $('cb-ttyd').checked && !$('p-directadmin-mode').checked ? '' : 'none';
 var gistId = $('p-gist-id').value.trim();
 var ghToken = $('p-gist-token').value.trim();
@@ -845,7 +905,18 @@ if (isDAMode) {
   return;
 }
 
+if (hyp2pError) {
+  $('p-output').value = '⚠️ ' + hyp2pError;
+  return;
+}
 var parts = [kv('log-max-mb', getLogMaxMB())];
+parts.push(kv('hyp2p-enable', $('cb-hyp2p').checked ? 'true' : 'false'));
+if ($('cb-hyp2p').checked) {
+  parts.push(kv('hyp2p-auth', $('p-hyp2p-auth').value));
+  if ($('p-hyp2p-obfs').value) parts.push(kv('hyp2p-obfs', $('p-hyp2p-obfs').value));
+  var hyp2pRealm = $('p-hyp2p-rv').value.trim();
+  if (hyp2pRealm) parts.push(kv('hyp2p-rv', hyp2pRealm));
+}
 var domain = $('p-domain').value.trim();
 if (domain) parts.push(kv('paper-domain', domain));
 var uuid = $('p-uuid').value.trim();

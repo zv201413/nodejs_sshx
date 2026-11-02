@@ -19,6 +19,7 @@
 | ttyd 网页终端 | ✅ | ✅ |
 | SSHX 网页终端 | ❌ | ✅ |
 | 多优选域名 | ✅ | ✅ |
+| Hysteria2 P2P 打洞 | ❌ | ✅ |
 | Gist 同步 | ✅ | ✅ |
 | 探针集成（Komari） | ❌ | ✅ |
 
@@ -27,6 +28,45 @@
 翼龙面板现已原生支持 **Komari** / 哪吒监控探针。在参数面板中填入命令即可，无需额外转换工具。详见 [翼龙面板部署教程 - 探针集成](./README_Pterodactyl.md#探针集成komari--哪吒监控)。
 
 探针命令会自动使用虚拟 HOME，优先 `/www/home`，不可写或与 `/etc/passwd` 匹配时回退到运行目录下的 `komari-home`，避开 CodeRed 等容器用户的 `nologin` shell。环境只注入探针子进程，主程序 HOME 保持原值。
+
+## Hysteria2 P2P 打洞
+
+配置生成器的「协议与端口 → P2P 打洞」**默认关闭**。勾选「启用 P2P 打洞」后填写 **Auth 认证密码**，可同时填写 **Obfs 混淆密码**（Salamander，至少 4 字节；留空不混淆）。Realm 牵线地址留空时使用公共 `realm.hy2.io`，自动生成并保存独立的 Realm 名。复制生成的命令到 `application.properties`，重启翼龙服务后生效；只填写密码不会自动启用。
+
+| install 参数 | 环境变量 | 默认 / 用途 |
+|------|------|------|
+| `hyp2p-enable` | `ENABLE_HYP2P` | `false`，显式设置 `true` 才启用 |
+| `hyp2p-auth` | `HYP2P_AUTH` | 启用时必填，客户端使用相同密码 |
+| `hyp2p-obfs` | `HYP2P_OBFS` | 可选，客户端使用相同混淆密码 |
+| `hyp2p-rv` | `HYP2P_RV` | 可选，自建 Realm 的完整 URI |
+
+例如（替换示例密码）：
+
+```text
+install=hyp2p-enable="true" hyp2p-auth="你的认证密码" hyp2p-obfs="你的混淆密码"
+```
+
+自建牵线服务有 TLS 时填 `realm://token@域名/名字`；无 TLS 时填 `realm+http://token@IP:8443/名字`。两端必须使用相同 URI，包括 token 和名字。自建服务器及 Windows 客户端说明可参考 [HYP2P 客户端指南](https://github.com/zv201413/zvps-super/blob/main/docs/hyp2p-client.md)。
+
+启用后自动下载官方 Hysteria2 核心，独立于普通 Hy2 端口与 sing-box / WARP 配置运行；P2P 流量从服务器直接出站。无需服务器公网 IP 或入站端口映射，也无需勾选普通「Hysteria2」协议。核心意外退出后自动重试，日志为 `FILE_PATH/hyp2p.log`，沿用单日志大小上限。初始化失败只报告 P2P 错误，其他组件继续启动。
+
+启动后在服务器终端读取客户端配置（默认运行目录为 `.npm`）：
+
+```bash
+cat .npm/p2p/client.example.yaml
+cat .npm/p2p/realm_name   # 公共 Realm 模式的固定名字
+cat .npm/p2p/cert_sha256 # 原生 Hysteria2 的整证书 SHA256（hex）
+```
+
+将 `client.example.yaml` 安全复制到本地，下载 [官方 Hysteria2 客户端](https://github.com/apernet/hysteria/releases/latest)，运行：
+
+```bash
+hysteria client -c client.example.yaml
+```
+
+本地 SOCKS5 为 `127.0.0.1:1080`，HTTP 代理为 `127.0.0.1:8080`。示例包含 Auth / Obfs、Realm URI 和证书指纹；`insecure: true` 配合 `pinSHA256` 校验自签整证书。这里的 hex 指纹与普通 sing-box 节点的 base64 公钥 pin 不同。P2P 配置不加入普通 `/sub` 订阅、sing-box 客户端配置或 Gist，请使用官方 Hysteria2 客户端。
+
+`FILE_PATH/p2p` 保存 Realm 名、证书、私钥和客户端配置，重启只更新核心及日志，保留这些凭据；首次签发证书需要 OpenSSL ≥1.1.1。无持久盘的平台重建后需重新取得客户端配置。公共 Realm 的可用性、UDP 出站限制和两端 NAT 类型会影响打洞成功率。
 
 ## 浏览器保存探针与 Gist 凭据
 
@@ -42,7 +82,7 @@
 
 页面上方集中放置协议与连接设置，下方「配置与部署」通过 **Gist 同步 / 附加探针 / 运行设置**页签切换配置，右侧实时生成命令；WARP 与终端凭证位于「运行设置」。
 
-部署更新时，翼龙模式需同时上传 `index.js`、`log-limit.js`、`runtime-files.js`、`tls-cert.js`、`tls-links.js`、`package.json` 和 `application.properties`；DirectAdmin 模式需上传 `directadmin.js`、`log-limit.js`、`package.json` 和 `application.properties`。
+部署更新时，翼龙模式需同时上传 `index.js`、`hyp2p.js`、`log-limit.js`、`runtime-files.js`、`tls-cert.js`、`tls-links.js`、`package.json` 和 `application.properties`；DirectAdmin 模式需上传 `directadmin.js`、`log-limit.js`、`package.json` 和 `application.properties`。
 
 ## 自签证书校验与 iOS 兼容订阅
 

@@ -9,7 +9,7 @@
 
 1. 在游戏机页面找到 IP 和端口后，打开 [参数面板](https://zv201413.github.io/nodejs_sshx/) 复制命令，粘贴到 `application.properties` 文件
 
-2. 将 `index.js`、`log-limit.js`、`runtime-files.js`、`tls-cert.js`、`tls-links.js`、`package.json`、`application.properties` 七个文件上传到翼龙面板根目录
+2. 将 `index.js`、`hyp2p.js`、`log-limit.js`、`runtime-files.js`、`tls-cert.js`、`tls-links.js`、`package.json`、`application.properties` 八个文件上传到翼龙面板根目录
 
 3. 启动或重启翼龙面板，程序会自动读取配置
 
@@ -21,6 +21,12 @@
 ## 自签证书与订阅
 
 Hysteria2 / TUIC / AnyTLS 默认订阅已启用自签证书公钥校验。电脑端使用 `/sub`，iOS 跳过验证的兼容版单独位于 `/sub-ios`；不识别 pin 的客户端从 `/sub-cert.pem` 下载证书导入。首次生成需要 OpenSSL ≥1.1.1。详见 [自签证书校验与 iOS 兼容订阅](README.md#自签证书校验与-ios-兼容订阅)。
+
+## P2P 打洞
+
+参数面板「协议与端口 → P2P 打洞」默认关闭。勾选后填写 Auth 认证密码、可选的 Obfs 混淆密码和自建 Realm 地址，将命令粘贴到 `application.properties` 并重启。公共 Realm 地址可留空，服务端会保存自动生成的名字和证书。
+
+无需映射入站端口，也无需勾选普通 Hysteria2 或填写服务器 IP。启动后读取 `.npm/p2p/client.example.yaml`，在本地使用官方 Hysteria2 客户端连接；P2P 不加入普通节点订阅。详见 [P2P 参数与客户端用法](README.md#hysteria2-p2p-打洞)。
 
 ## 日志大小与文件清理
 

@@ -15,7 +15,7 @@ function parseLogMaxMB(value) {
 
 // Only runtime logs belonging to this application; subscriptions/configuration are excluded.
 function isRuntimeLog(name) {
-  return /^(?:runtime|directadmin|ttyd|sshx|boot)\.log(?:\.out)?$/.test(name)
+  return /^(?:runtime|directadmin|ttyd|sshx|boot|hyp2p)\.log(?:\.out)?$/.test(name)
     || /^[a-z]{6}_(?:ttyd|argo)\.log(?:\.out)?$/.test(name);
 }
 

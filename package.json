@@ -4,6 +4,7 @@
   "description": "nodejs",
   "main": "index.js",
   "scripts": {
+    "build:deploy": "python3 scripts/build-deploy.py",
     "test": "node --test tests/*.test.js",
     "start": "node index.js",
     "directadmin": "node directadmin.js"

@@ -7,6 +7,8 @@
 | 🖥️ DirectAdmin | [DirectAdmin 部署教程](README_DirectAdmin.md) | Node.js，ttyd可选 |
 | 🐲 翼龙面板 (Pterodactyl) | [翼龙面板部署教程](./README_Pterodactyl.md) | 支持 sing-box、ttyd、SSHX、WARP |
 
+翼龙 / KataBump 推荐下载 [完整部署包](deploy/nodejs-sshx-pterodactyl.zip)，上传并在服务器根目录解压，保留现有 `application.properties`。仅上传 `index.js` 会缺少本地辅助模块；npm install 不会补齐这些项目文件。
+
 ---
 
 ## 功能对比

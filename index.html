@@ -246,6 +246,7 @@ font-family: monospace;
 .actions { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
 .tip { font-size: 12px; color: var(--sub); margin-top: 8px; line-height: 1.6; }
 .tip code { background: rgba(79,124,255,.15); padding: 1px 5px; border-radius: 4px; color: var(--acc); }
+.tip a { color: var(--acc); }
 #p-warp-data { min-height: 60px; height: 64px; }
 
 [hidden] { display: none !important; }
@@ -443,6 +444,10 @@ font-family: monospace;
 <div class="actions">
 <button class="btn btn-primary" id="p-copy">复制命令</button>
 <button class="btn" id="p-reset">重置</button>
+</div>
+<div id="p-deploy-guide">
+<p class="tip"><a href="https://github.com/zv201413/nodejs_sshx/raw/refs/heads/master/deploy/nodejs-sshx-pterodactyl.zip">下载翼龙 / KataBump 完整部署包</a>，上传后在服务器根目录解压。包内文件必须与 <code>application.properties</code> 放在同一级；部署包保留现有配置。</p>
+<p class="tip">手动上传时需包含 <code>index.js</code>、<code>log-limit.js</code>、<code>runtime-files.js</code>、<code>tls-cert.js</code>、<code>tls-links.js</code>、<code>hyp2p.js</code> 和 <code>package.json</code>；可上传 <code>index.html</code> 提供本机参数页面。</p>
 </div>
 </aside>
 </div>
@@ -673,6 +678,7 @@ function syncHyp2pControls() {
   var isDA = $('p-directadmin-mode').checked;
   var active = $('cb-hyp2p').checked && !isDA;
   $('hyp2p-section').hidden = isDA;
+  $('p-deploy-guide').hidden = isDA;
   $('cb-hyp2p').disabled = isDA;
   $('cb-hyp2p').setAttribute('aria-expanded', String(active));
   $('item-hyp2p').classList.toggle('active', active);

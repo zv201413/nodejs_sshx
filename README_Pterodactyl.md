@@ -9,7 +9,9 @@
 
 1. 在游戏机页面找到 IP 和端口后，打开 [参数面板](https://zv201413.github.io/nodejs_sshx/) 复制命令，粘贴到 `application.properties` 文件
 
-2. 将 `index.js`、`hyp2p.js`、`log-limit.js`、`runtime-files.js`、`tls-cert.js`、`tls-links.js`、`package.json`、`application.properties` 八个文件上传到翼龙面板根目录
+2. 推荐下载 [翼龙 / KataBump 完整部署包](deploy/nodejs-sshx-pterodactyl.zip)，上传并在面板根目录解压。压缩包中的文件不带外层目录，须与 `application.properties` 放在同一级；不包含配置文件，更新时保留现有配置。
+
+   手动上传需包含 `index.js`、`hyp2p.js`、`log-limit.js`、`runtime-files.js`、`tls-cert.js`、`tls-links.js`、`package.json`，并在同目录保留或创建 `application.properties`。可同时上传 `index.html` 提供参数页面。**只上传 `index.js` 会报本地模块缺失，npm install 不会下载这些项目文件。**
 
 3. 启动或重启翼龙面板，程序会自动读取配置
 
@@ -105,6 +107,9 @@ cat wgcf-profile.conf
 
 ## 常见问题
 
+**Q: 启动报 `Cannot find module './log-limit'`（或 `./runtime-files` / `./tls-cert` / `./tls-links` / `./hyp2p`）？**
+A: 部署缺少项目文件，或文件被解压进了子目录。下载完整部署包并解压到 `index.js` 所在目录（KataBump 通常为 `/home/container/`），保留现有 `application.properties` 后重启。缺失的是项目本地 `.js` 文件，重装 npm 依赖无法补齐。
+
 **Q: 节点名称如何自动添加国家代码？**
 A: 程序会自动调用 IP API 获取国家代码和 ISP 信息
 
@@ -154,3 +159,5 @@ A: 1) 检查服务器是否支持 IPv6（`ip a` 或 `curl -6 ifconfig.co`）；2
 ## 鸣谢
 
 - [eooce/Sing-box](https://github.com/eooce/Sing-box)
+
+维护者在更新部署文件后运行 `npm run build:deploy` 重新生成压缩包；构建使用 Python 3 标准库，不会打包运行数据、Token、私钥或 `application.properties`。

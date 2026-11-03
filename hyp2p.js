@@ -73,12 +73,23 @@ async function prepareHyp2p(directory, config) {
     listen: realm,
     tls: { cert: path.join(p2p, 'cert.pem'), key: path.join(p2p, 'private.key') },
     auth: { type: 'password', password: config.auth },
+    realm: {
+      stunServers: [
+        'stun.nextcloud.com:3478',
+        'global.stun.twilio.com:3478',
+      ],
+      stunTimeout: '15s',
+      punchTimeout: '20s',
+      heartbeatInterval: '30s',
+    },
   };
   const obfs = config.obfs ? { type: 'salamander', salamander: { password: config.obfs } } : null;
   if (obfs) server.obfs = obfs;
   const client = [
     'server: ' + JSON.stringify(realm),
     'auth: ' + JSON.stringify(config.auth),
+    'realm:',
+    '  punchTimeout: 20s',
     'tls:', '  sni: ' + JSON.stringify(certificate.serverName), '  insecure: true',
     '  pinSHA256: ' + JSON.stringify(pin), '  alpn: [h3]',
   ];

@@ -64,10 +64,14 @@ test('server and client retain complex passwords, matching obfs and the native w
   assert.equal(server.auth.password, auth);
   assert.equal(server.obfs.salamander.password, obfs);
   assert.ok(path.isAbsolute(server.tls.cert));
+  assert.equal(server.realm.punchTimeout, '20s');
+  assert.equal(server.realm.heartbeatInterval, '30s');
+  assert.deepEqual(server.realm.stunServers, ['stun.nextcloud.com:3478', 'global.stun.twilio.com:3478']);
   const yaml = fs.readFileSync(prepared.clientPath, 'utf8');
   assert.ok(yaml.includes('auth: ' + JSON.stringify(auth) + '\n'));
   assert.ok(yaml.includes('password: ' + JSON.stringify(obfs) + '\n'));
   assert.ok(yaml.includes('server: ' + JSON.stringify(prepared.realm)));
+  assert.ok(yaml.includes('punchTimeout: 20s'));
   assert.ok(yaml.includes('insecure: true'));
   assert.ok(yaml.includes('pinSHA256: ' + JSON.stringify(prepared.pin)));
   const cert = new crypto.X509Certificate(fs.readFileSync(server.tls.cert));

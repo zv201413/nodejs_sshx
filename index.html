@@ -381,11 +381,14 @@ font-family: monospace;
 <div class="row" id="p-gist-row"><label for="p-gist-id">Gist ID <span class="pill">gist-id</span></label><input type="text" id="p-gist-id" name="username" autocomplete="username" autocapitalize="none" spellcheck="false" placeholder="留空则不启用"></div>
 <div class="row" id="p-gist-row2"><label for="p-gist-token">GitHub Token <span class="pill">gh-token</span></label><input type="password" id="p-gist-token" name="password" autocomplete="current-password" autocapitalize="none" spellcheck="false" placeholder="留空则不启用"></div>
 <div class="actions">
-<button class="btn" type="submit">保存到浏览器</button>
+<button class="btn" type="submit">保存 / 更新到浏览器</button>
+<button class="btn" id="updateGistCredentials" type="button">更新已存凭据</button>
 <button class="btn" id="fillGistCredentials" type="button">填入已存凭据</button>
+<button class="btn" id="verifyGistCredentials" type="button">核对保存结果</button>
 </div>
 </form>
-<p class="tip">点击保存后，在浏览器密码提示中确认；下次可填入已存凭据。请通过 HTTPS 或 localhost 打开页面。</p>
+<p class="tip">相同 Gist ID 可更新 Token；点击「更新已存凭据」选择旧记录后保存当前新内容，再核对保存结果。请通过 HTTPS 或 localhost 打开页面。</p>
+<p class="tip" id="gistCredentialsStatus" role="status" aria-live="polite" hidden></p>
 <p class="tip" id="p-gist-credential-error" role="status" hidden style="color:var(--err)">Gist 栏中填入了探针记录，请选择 Gist 凭据。</p>
 
 <p class="tip" id="p-gist-preview" style="display:none;color:var(--acc)"></p>
@@ -409,10 +412,15 @@ font-family: monospace;
 </div>
 </div>
 <div class="actions">
-<button class="btn" type="submit">保存到浏览器</button>
+<button class="btn" type="submit">保存 / 更新到浏览器</button>
+<button class="btn" id="updateAgentCredentials" type="button">更新已存凭据</button>
 <button class="btn" id="fillAgentCredentials" type="button">填入已存凭据</button>
+<button class="btn" id="verifyAgentCredentials" type="button">核对保存结果</button>
 </div>
-</form></div>
+</form>
+<p class="tip">相同备注可更新安装命令；先填入旧记录再修改，或点击「更新已存凭据」选择旧记录。更新时请保持备注不变。</p>
+<p class="tip" id="agentCredentialsStatus" role="status" aria-live="polite" hidden></p>
+</div>
 <div class="config-panel" id="panel-runtime" role="tabpanel" aria-labelledby="tab-runtime" hidden>
 <div id="warp-section">
 <div class="section-label">WARP 出站（可选）</div>
@@ -519,6 +527,19 @@ function getLogMaxMB() {
 }
 
 var agentCredentialPrefix = '[探针] ';
+var loadedAgentCredential = null;
+var credentialRequestPending = false;
+
+function credentialStatus(agent, message) {
+  var status = $(agent ? 'agentCredentialsStatus' : 'gistCredentialsStatus');
+  status.textContent = message;
+  status.hidden = false;
+}
+
+function agentCredentialNote(credential) {
+  return credential.id.startsWith(agentCredentialPrefix)
+    ? credential.id.slice(agentCredentialPrefix.length) : credential.id;
+}
 
 function canUseBrowserCredentials() {
   if (!['http:', 'https:'].includes(location.protocol) || !window.isSecureContext) {
@@ -542,49 +563,90 @@ function isAgentCredential(credential) {
     || /^https?:\/\//i.test((credential.password || '').trim());
 }
 
-async function saveBrowserCredential(credential) {
+function currentBrowserCredential(agent) {
+  var id = $(agent ? 'p-agent-note' : 'p-gist-id').value.trim();
+  var password = $(agent ? 'p-komari' : 'p-gist-token').value.trim();
+  if (!id || !password) {
+    showToast(agent ? '请填写备注和完整安装命令后再保存' : '保存时请填写 Gist ID 和 GitHub Token');
+    return null;
+  }
+  if (agent && !isAgentCommand(password)) {
+    showToast('请粘贴完整的 wget / curl / bash 探针安装命令');
+    return null;
+  }
+  if (!agent && isAgentCredential({ id: id, password: password })) {
+    showToast('这是探针记录，请填写 Gist ID 和 GitHub Token');
+    return null;
+  }
+  if (!agent) return { id: id, password: password };
+  // Keep legacy usernames intact so saving a filled record updates that record.
+  var storedId = loadedAgentCredential && loadedAgentCredential.note === id
+    ? loadedAgentCredential.id : agentCredentialPrefix + id;
+  return { id: storedId, password: password, name: '探针配置：' + id };
+}
+
+async function saveBrowserCredential(credential, agent) {
   try {
     await navigator.credentials.store(new PasswordCredential(credential));
-    showToast('已请求浏览器保存，请在密码提示中确认');
+    credentialStatus(agent, '已提交保存 / 更新请求。若浏览器显示密码提示，请确认；未显示时可点击地址栏密码图标查看。点击「核对保存结果」确认旧内容已更新。');
+    showToast('已提交保存 / 更新请求，请核对保存结果');
   } catch (e) {
+    credentialStatus(agent, '保存 / 更新请求失败，请检查浏览器密码管理器设置后重试。');
     showToast('浏览器未接受保存请求，请检查密码管理器设置');
   }
 }
 
-$('agentCredentials').addEventListener('submit', async function(event) {
-  event.preventDefault();
-  var note = $('p-agent-note').value.trim();
-  var command = $('p-komari').value.trim();
-  if (!note || !command) {
-    showToast('请填写备注和完整安装命令后再保存');
+async function submitBrowserCredential(agent, update) {
+  // Snapshot edited values before opening the chooser; it must not refill old content.
+  var credential = currentBrowserCredential(agent);
+  var note = agent ? $('p-agent-note').value.trim() : '';
+  if (!credential || !canUseBrowserCredentials()) return;
+  if (credentialRequestPending) {
+    showToast('请先完成当前密码管理器操作');
     return;
   }
-  if (!isAgentCommand(command)) {
-    showToast('请粘贴完整的 wget / curl / bash 探针安装命令');
-    return;
+  credentialRequestPending = true;
+  try {
+    if (update) {
+      var stored = await navigator.credentials.get({ password: true, mediation: 'required' });
+      if (!stored) {
+        credentialStatus(agent, '未选择旧记录，未提交更新。');
+        return;
+      }
+      var sameAccount = agent
+        ? agentCredentialNote(stored) === note
+        : stored.id === credential.id;
+      if (isAgentCredential(stored) !== agent || !sameAccount) {
+        credentialStatus(agent, '所选记录与当前' + (agent ? '探针备注' : 'Gist ID') + '不一致，未提交更新。请选择对应的旧记录。');
+        return;
+      }
+      credential.id = stored.id;
+      if (agent) loadedAgentCredential = { id: stored.id, note: agentCredentialNote(stored) };
+    }
+    await saveBrowserCredential(credential, agent);
+  } catch (e) {
+    credentialStatus(agent, '浏览器未能读取旧记录，未提交更新。请检查密码管理器设置后重试。');
+  } finally {
+    credentialRequestPending = false;
   }
-  if (!canUseBrowserCredentials()) return;
-  await saveBrowserCredential({ id: agentCredentialPrefix + note, password: command, name: '探针配置：' + note });
+}
+
+['agentCredentials', 'gistCredentials'].forEach(function(id) {
+  $(id).addEventListener('submit', function(event) {
+    event.preventDefault();
+    submitBrowserCredential(id === 'agentCredentials', false);
+  });
 });
 
-$('gistCredentials').addEventListener('submit', async function(event) {
-  event.preventDefault();
-  var id = $('p-gist-id').value.trim();
-  var password = $('p-gist-token').value.trim();
-  if (!id || !password) {
-    showToast('保存时请填写 Gist ID 和 GitHub Token');
+async function fillBrowserCredential(agent, verify) {
+  var expected = verify ? currentBrowserCredential(agent) : null;
+  if (verify && !expected) return;
+  if (!canUseBrowserCredentials()) return;
+  if (credentialRequestPending) {
+    showToast('请先完成当前密码管理器操作');
     return;
   }
-  if (isAgentCredential({ id: id, password: password })) {
-    showToast('这是探针记录，请填写 Gist ID 和 GitHub Token');
-    return;
-  }
-  if (!canUseBrowserCredentials()) return;
-  await saveBrowserCredential({ id: id, password: password });
-});
-
-async function fillBrowserCredential(agent) {
-  if (!canUseBrowserCredentials()) return;
+  credentialRequestPending = true;
   try {
     var credential = await navigator.credentials.get({ password: true, mediation: 'required' });
     if (!credential) {
@@ -595,9 +657,19 @@ async function fillBrowserCredential(agent) {
       showToast(agent ? '所选记录是 Gist 凭据，请选择探针记录' : '所选记录是探针配置，请选择 Gist 凭据');
       return;
     }
+    if (verify) {
+      if (credential.id !== expected.id) {
+        credentialStatus(agent, '所选记录与当前内容不对应，请选择相同' + (agent ? '备注的探针记录。' : ' Gist ID 的记录。'));
+      } else if (credential.password === expected.password) {
+        credentialStatus(agent, '核对通过：密码管理器中的内容与当前填写内容一致。');
+      } else {
+        credentialStatus(agent, '核对未通过：密码管理器中仍是其他内容。请重试「更新已存凭据」，或在浏览器密码管理器中手动编辑对应记录。');
+      }
+      return;
+    }
     if (agent) {
-      $('p-agent-note').value = credential.id.startsWith(agentCredentialPrefix)
-        ? credential.id.slice(agentCredentialPrefix.length) : credential.id;
+      $('p-agent-note').value = agentCredentialNote(credential);
+      loadedAgentCredential = { id: credential.id, note: $('p-agent-note').value };
       $('p-komari').value = credential.password;
       document.querySelector('.agent-command-control').dataset.masked = 'true';
       $('toggleAgentCommand').textContent = '显示';
@@ -607,14 +679,26 @@ async function fillBrowserCredential(agent) {
       $('p-gist-token').value = credential.password;
     }
     renderPaper();
+    credentialStatus(agent, '已填入旧记录；保持' + (agent ? '备注' : ' Gist ID ') + '不变，修改内容后点击「保存 / 更新到浏览器」即可请求覆盖。');
     showToast(agent ? '已填入备注和安装命令' : '已填入 Gist ID 和 Token');
   } catch (e) {
     showToast('浏览器未能填入凭据，请检查密码管理器设置');
+  } finally {
+    credentialRequestPending = false;
   }
 }
 
+$('updateAgentCredentials').addEventListener('click', function() { submitBrowserCredential(true, true); });
+$('updateGistCredentials').addEventListener('click', function() { submitBrowserCredential(false, true); });
+$('verifyAgentCredentials').addEventListener('click', function() { fillBrowserCredential(true, true); });
+$('verifyGistCredentials').addEventListener('click', function() { fillBrowserCredential(false, true); });
 $('fillAgentCredentials').addEventListener('click', function() { fillBrowserCredential(true); });
 $('fillGistCredentials').addEventListener('click', function() { fillBrowserCredential(false); });
+['p-agent-note', 'p-komari', 'p-gist-id', 'p-gist-token'].forEach(function(id) {
+  $(id).addEventListener('input', function() {
+    $(id === 'p-agent-note' || id === 'p-komari' ? 'agentCredentialsStatus' : 'gistCredentialsStatus').hidden = true;
+  });
+});
 $('toggleAgentCommand').addEventListener('click', function() {
   var control = document.querySelector('.agent-command-control');
   var show = control.dataset.masked === 'true';

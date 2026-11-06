@@ -186,3 +186,33 @@ test('the actual install parser round-trips quoted passwords from properties and
     assert.equal(parsed['hyp2p-obfs'], obfs);
   }
 });
+
+test('DISABLE_ARGO defaults to false when paper-argo or token is present unless explicitly true', t => {
+  const directory = fixture(t);
+  const filename = path.join(directory, 'application.properties');
+  const source = fs.readFileSync(path.join(__dirname, '..', 'index.js'), 'utf8');
+
+  function evalConfig(line) {
+    fs.writeFileSync(filename, line);
+    const script = `
+      ${source.slice(source.indexOf('function parseInstallParams()'), source.indexOf('const PAPER_TUIC_PORT ='))}
+      ({ DISABLE_ARGO, PAPER_ARGO, ARGO_AUTH });
+    `;
+    return vm.runInNewContext(script, {
+      fs,
+      path,
+      __dirname: directory,
+      appConfigFile: filename,
+      process: { argv: [], env: {} },
+      console: { log: () => {} },
+    });
+  }
+
+  // 1. paper-argo set without DISABLE_ARGO -> should be false
+  assert.equal(evalConfig('install=paper-argo="vless-ws" paper-argo-token="tok123"').DISABLE_ARGO, 'false');
+  // 2. DISABLE_ARGO explicitly true -> should be true
+  assert.equal(evalConfig('install=DISABLE_ARGO="true" paper-domain="51.68"').DISABLE_ARGO, 'true');
+  // 3. empty config -> defaults to true
+  assert.equal(evalConfig('').DISABLE_ARGO, 'true');
+});
+

@@ -159,7 +159,8 @@ const CFIP = getConfig('CFIP', 'CFIP', '104.17.100.191');             // 优选�
 const CFPORT = parseInt(getConfig('CFPORT', 'CFPORT', '443'));                    // 优选域名或优选IP对应端口
 const PORT = parseInt(getConfig('PORT', 'PORT', '3000'));                       // http订阅端口    
 const NAME = getConfig('NAME', 'NAME', '');                         // 节点名称
-const DISABLE_ARGO = getConfig('DISABLE_ARGO', 'DISABLE_ARGO', 'true');      // 设置为 true 时禁用argo,false开启
+const defaultDisableArgo = (fileConfig['paper-argo'] || fileConfig['paper_argo'] || fileConfig['paper-argo-token'] || fileConfig['paper_argo_token'] || process.env.ARGO_AUTH || process.env.PAPER_ARGO) ? 'false' : 'true';
+const DISABLE_ARGO = getConfig('DISABLE_ARGO', 'DISABLE_ARGO', defaultDisableArgo);      // 设置为 true 时禁用argo,false开启
 const ENABLE_SSHX = getConfig('ENABLE_SSHX', 'ENABLE_SSHX', 'false'); // 设置为 true 时启用SSHX,false关闭
 const ENABLE_TTYD = getConfig('ENABLE_TTYD', 'ENABLE_TTYD', 'false'); // 设置为 true 时启用ttyd,false关闭
 
